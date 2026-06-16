@@ -15,7 +15,7 @@ export type LoginResult =
   | { success: true; admin: AdminUser }
   | { success: false; error: string };
 
-export async function loginAdmin(
+export async function authenticateAdmin(
   email: string,
   password: string,
 ): Promise<LoginResult> {
@@ -69,11 +69,24 @@ export async function loginAdmin(
     updated_at: record.updated_at,
   };
 
-  const token = await createSessionToken(admin);
-  await setSessionCookie(token);
-  await updateLastLoginAt(admin.id);
-
   return { success: true, admin };
+}
+
+export async function loginAdmin(
+  email: string,
+  password: string,
+): Promise<LoginResult> {
+  const result = await authenticateAdmin(email, password);
+
+  if (!result.success) {
+    return result;
+  }
+
+  const token = await createSessionToken(result.admin);
+  await setSessionCookie(token);
+  await updateLastLoginAt(result.admin.id);
+
+  return result;
 }
 
 export async function logoutAdmin(): Promise<void> {

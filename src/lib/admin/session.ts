@@ -5,10 +5,13 @@ import { cookies } from "next/headers";
 
 import {
   ADMIN_SESSION_COOKIE,
+  JWT_CLOCK_TOLERANCE,
   SESSION_MAX_AGE_SECONDS,
-} from "@/lib/admin/constants";
+  getClearSessionCookieOptions,
+  getSessionCookieOptions,
+} from "@/lib/admin/cookie-options";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdminAuthSecret, getAdminEnvErrorMessage, isProduction } from "@/lib/env/server";
+import { getAdminAuthSecret, getAdminEnvErrorMessage } from "@/lib/env/server";
 import type {
   AdminSessionPayload,
   AdminUser,
@@ -17,8 +20,26 @@ import type {
 
 export { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE_SECONDS };
 
+export type AdminUserLookupResult =
+  | { admin: AdminUser; error: null }
+  | { admin: null; error: null }
+  | { admin: null; error: string };
+
 function getSecretKey(): Uint8Array {
   return new TextEncoder().encode(getAdminAuthSecret());
+}
+
+function adminFromSessionPayload(payload: AdminSessionPayload): AdminUser {
+  return {
+    id: payload.sub,
+    name: payload.name,
+    email: payload.email,
+    role: payload.role,
+    status: "active",
+    last_login_at: null,
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date(0).toISOString(),
+  };
 }
 
 export async function createSessionToken(
@@ -42,6 +63,7 @@ export async function verifySessionToken(
   try {
     const { payload } = await jwtVerify(token, getSecretKey(), {
       algorithms: ["HS256"],
+      clockTolerance: JWT_CLOCK_TOLERANCE,
     });
 
     const sub = payload.sub;
@@ -71,26 +93,12 @@ export async function verifySessionToken(
 
 export async function setSessionCookie(token: string): Promise<void> {
   const cookieStore = await cookies();
-
-  cookieStore.set(ADMIN_SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProduction(),
-    maxAge: SESSION_MAX_AGE_SECONDS,
-    path: "/",
-  });
+  cookieStore.set(ADMIN_SESSION_COOKIE, token, getSessionCookieOptions());
 }
 
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
-
-  cookieStore.set(ADMIN_SESSION_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProduction(),
-    maxAge: 0,
-    path: "/",
-  });
+  cookieStore.set(ADMIN_SESSION_COOKIE, "", getClearSessionCookieOptions());
 }
 
 export async function getSessionTokenFromCookie(): Promise<string | null> {
@@ -98,7 +106,9 @@ export async function getSessionTokenFromCookie(): Promise<string | null> {
   return cookieStore.get(ADMIN_SESSION_COOKIE)?.value ?? null;
 }
 
-export async function getAdminUserById(id: string): Promise<AdminUser | null> {
+export async function lookupAdminUserById(
+  id: string,
+): Promise<AdminUserLookupResult> {
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -109,11 +119,20 @@ export async function getAdminUserById(id: string): Promise<AdminUser | null> {
     .eq("id", id)
     .maybeSingle();
 
-  if (error || !data) {
-    return null;
+  if (error) {
+    return { admin: null, error: error.message };
   }
 
-  return data as AdminUser;
+  if (!data) {
+    return { admin: null, error: null };
+  }
+
+  return { admin: data as AdminUser, error: null };
+}
+
+export async function getAdminUserById(id: string): Promise<AdminUser | null> {
+  const result = await lookupAdminUserById(id);
+  return result.admin;
 }
 
 export async function getAdminUserByEmail(
@@ -149,12 +168,21 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
     return null;
   }
 
-  const admin = await getAdminUserById(payload.sub);
-  if (!admin || admin.status !== "active") {
-    return null;
+  const lookup = await lookupAdminUserById(payload.sub);
+
+  if (lookup.admin) {
+    if (lookup.admin.status !== "active") {
+      return null;
+    }
+
+    return lookup.admin;
   }
 
-  return admin;
+  if (lookup.error) {
+    return adminFromSessionPayload(payload);
+  }
+
+  return null;
 }
 
 export async function updateLastLoginAt(adminId: string): Promise<void> {

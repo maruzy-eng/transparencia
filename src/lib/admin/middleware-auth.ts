@@ -1,6 +1,11 @@
 import { jwtVerify } from "jose";
 
-export { ADMIN_SESSION_COOKIE } from "@/lib/admin/constants";
+import {
+  ADMIN_SESSION_COOKIE,
+  JWT_CLOCK_TOLERANCE,
+} from "@/lib/admin/cookie-options";
+
+export { ADMIN_SESSION_COOKIE };
 
 export async function verifyAdminSessionToken(
   token: string,
@@ -10,6 +15,7 @@ export async function verifyAdminSessionToken(
     const secretKey = new TextEncoder().encode(secret);
     const { payload } = await jwtVerify(token, secretKey, {
       algorithms: ["HS256"],
+      clockTolerance: JWT_CLOCK_TOLERANCE,
     });
 
     return (

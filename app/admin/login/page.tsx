@@ -9,7 +9,7 @@ import { getAdminEnvErrorMessage, getMissingAdminEnvVars } from "@/lib/env/serve
 export const dynamic = "force-dynamic";
 
 interface AdminLoginPageProps {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }
 
 export default async function AdminLoginPage({
@@ -23,6 +23,7 @@ export default async function AdminLoginPage({
 
   const params = await searchParams;
   const nextPath = params.next ?? "/admin/dashboard";
+  const loginError = params.error ?? undefined;
   const envError = getAdminEnvErrorMessage();
   const missingEnvVars = getMissingAdminEnvVars();
 
@@ -57,7 +58,11 @@ export default async function AdminLoginPage({
         ) : null}
 
         <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
-          <LoginForm nextPath={nextPath} disabled={Boolean(envError)} />
+          <LoginForm
+            nextPath={nextPath}
+            disabled={Boolean(envError)}
+            error={loginError}
+          />
         </div>
       </div>
     </div>

@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import {
   ADMIN_SESSION_COOKIE,
-  verifyAdminSessionToken,
-} from "@/lib/admin/middleware-auth";
+  getSessionCookieOptions,
+} from "@/lib/admin/cookie-options";
+import { verifyAdminSessionToken } from "@/lib/admin/middleware-auth";
 
 const PUBLIC_ADMIN_PATHS = ["/admin/login", "/admin/logout"];
 
@@ -13,7 +14,12 @@ function isPublicAdminPath(pathname: string): boolean {
   );
 }
 
-export async function middleware(request: NextRequest) {
+function attachSessionCookie(response: NextResponse, token: string): NextResponse {
+  response.cookies.set(ADMIN_SESSION_COOKIE, token, getSessionCookieOptions());
+  return response;
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!pathname.startsWith("/admin")) {
@@ -27,7 +33,7 @@ export async function middleware(request: NextRequest) {
     (await verifyAdminSessionToken(sessionToken!, authSecret!));
 
   if (pathname.startsWith("/admin/login")) {
-    if (hasValidSession) {
+    if (hasValidSession && request.method === "GET") {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
 
@@ -46,6 +52,10 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL("/admin/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  if (sessionToken) {
+    return attachSessionCookie(NextResponse.next(), sessionToken);
   }
 
   return NextResponse.next();
