@@ -59,6 +59,9 @@ Thumbs.db
 .cursor/
 *.log
 
+# Accidental nested clone of the GitHub repo
+/transparencia/
+
 # Certificates / keys
 *.pem
 *.key
