@@ -1,26 +1,229 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(0.12 0.01 260);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.16 0.012 260);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.16 0.012 260);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.78 0.14 75);
+  --primary-foreground: oklch(0.18 0.02 75);
+  --secondary: oklch(0.22 0.01 260);
+  --secondary-foreground: oklch(0.92 0 0);
+  --muted: oklch(0.22 0.01 260);
+  --muted-foreground: oklch(0.68 0.01 260);
+  --accent: oklch(0.24 0.015 260);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.28 0.01 260);
+  --input: oklch(0.28 0.01 260);
+  --ring: oklch(0.78 0.14 75);
+  --radius: 0.75rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+.transparency-theme {
+  --background: #fafbfc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #39aff2;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f7fa;
+  --secondary-foreground: #0f172a;
+  --muted: #f4f7fa;
+  --muted-foreground: #64748b;
+  --accent: #eef9f3;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #39aff2;
+  --checkmate-green: #53bc76;
+  --checkmate-blue: #39aff2;
+  --checkmate-teal: #2ec7a6;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.transparency-theme .checkmate-gradient {
+  background: linear-gradient(135deg, #53bc76 0%, #2ec7a6 45%, #39aff2 100%);
+}
+
+.transparency-theme .checkmate-gradient-text {
+  background: linear-gradient(135deg, #53bc76 0%, #2ec7a6 45%, #39aff2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.transparency-theme .checkmate-filter-active {
+  border-color: rgba(46, 199, 166, 0.28);
+  background: linear-gradient(
+    135deg,
+    rgba(83, 188, 118, 0.1) 0%,
+    rgba(57, 175, 242, 0.08) 100%
+  );
+  color: #0f766e;
+}
+
+.transparency-theme .transparency-page-bg {
+  background-color: #fafbfc;
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.025) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.transparency-theme .transparency-grid-bg {
+  background-color: transparent;
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.025) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.transparency-theme .transparency-hero-glow {
+  background:
+    radial-gradient(
+      circle at 78% 38%,
+      rgba(83, 188, 118, 0.05),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 92% 62%,
+      rgba(57, 175, 242, 0.04),
+      transparent 32%
+    );
+}
+
+.transparency-theme .transparency-shape {
+  pointer-events: none;
+  position: absolute;
+  border: 1px solid rgba(226, 232, 240, 0.55);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.35);
+  opacity: 0.45;
+}
+
+.transparency-theme .transparency-shape-one {
+  top: 140px;
+  right: 4%;
+  height: 88px;
+  width: 88px;
+  transform: rotate(10deg);
+}
+
+.transparency-theme .transparency-shape-two {
+  top: 360px;
+  left: 2%;
+  height: 64px;
+  width: 64px;
+  transform: rotate(-12deg);
+  opacity: 0.35;
+}
+
+.transparency-theme .checkmate-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.transparency-theme .checkmate-pill-dot {
+  height: 0.45rem;
+  width: 0.45rem;
+  border-radius: 9999px;
+  background: #53bc76;
+}
+
+.transparency-theme .text-positive {
+  color: #53bc76;
+}
+
+.transparency-theme .text-brand-blue {
+  color: #39aff2;
+}
+
+.admin-theme {
+  --background: #fafbfc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --primary: #39aff2;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f7fa;
+  --secondary-foreground: #0f172a;
+  --muted: #f4f7fa;
+  --muted-foreground: #64748b;
+  --accent: #eef9f3;
+  --accent-foreground: #0f172a;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #39aff2;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.admin-theme .checkmate-gradient {
+  background: linear-gradient(135deg, #53bc76 0%, #2ec7a6 45%, #39aff2 100%);
+}
+
+.admin-theme .admin-page-bg {
+  background-color: #fafbfc;
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.025) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
