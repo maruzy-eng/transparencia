@@ -90,7 +90,7 @@ export function PropertyKpis({ property }: PropertyKpisProps) {
   ];
 
   return (
-    <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+    <section className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
       {kpis.map((kpi) => {
         const Icon = kpi.icon;
 

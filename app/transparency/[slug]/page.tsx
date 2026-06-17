@@ -73,13 +73,13 @@ export default async function PropertyDetailPage({
   return (
     <DetailPageShell>
       <PropertyHero property={property} />
-      <PropertyKpis property={property} />
-      <ProjectHealthCard property={property} phases={phases} />
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="flex flex-col gap-6 md:gap-8 lg:gap-10">
+        <MediaGallery media={media} />
+        <PropertyKpis property={property} />
         <PropertyPhasesTimeline phases={phases} />
+        <ProjectHealthCard property={property} phases={phases} />
         <PropertyUpdatesList updates={updates} />
       </div>
-      <MediaGallery media={media} />
     </DetailPageShell>
   );
 }

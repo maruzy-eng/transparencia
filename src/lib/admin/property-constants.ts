@@ -39,7 +39,9 @@ export const UPDATE_TYPES = [
   "sale",
 ] as const;
 
-export const MEDIA_TYPES = ["photo", "video"] as const;
+export const MEDIA_TYPES = ["image", "video"] as const;
+
+export type MediaType = (typeof MEDIA_TYPES)[number];
 
 export type PropertyStatus = (typeof PROPERTY_STATUSES)[number];
 export type ProjectType = (typeof PROJECT_TYPES)[number];
@@ -85,4 +87,17 @@ export function updateTypeLabel(type: string): string {
     sale: "Venda",
   };
   return labels[type] ?? type;
+}
+
+export function normalizeMediaType(value: string | null | undefined): MediaType {
+  if (value === "video") return "video";
+  return "image";
+}
+
+export function mediaTypeLabel(type: string): string {
+  return type === "video" ? "Vídeo" : "Foto";
+}
+
+export function isImageMediaType(type: string): boolean {
+  return type !== "video";
 }

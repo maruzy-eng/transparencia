@@ -1,6 +1,12 @@
 const DIRECT_VIDEO_EXTENSIONS = /\.(mp4|webm|mov|ogg|m4v)(\?.*)?$/i;
 
 export function getYoutubeEmbedUrl(url: string): string | null {
+  const id = getYoutubeVideoId(url);
+  if (!id) return null;
+  return `https://www.youtube.com/embed/${id}`;
+}
+
+export function getYoutubeVideoId(url: string): string | null {
   const patterns = [
     /youtube\.com\/watch\?v=([^&]+)/,
     /youtu\.be\/([^?]+)/,
@@ -11,11 +17,17 @@ export function getYoutubeEmbedUrl(url: string): string | null {
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match?.[1]) {
-      return `https://www.youtube.com/embed/${match[1]}`;
+      return match[1];
     }
   }
 
   return null;
+}
+
+export function getYoutubeThumbnailUrl(url: string): string | null {
+  const id = getYoutubeVideoId(url);
+  if (!id) return null;
+  return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
 }
 
 export function getVimeoEmbedUrl(url: string): string | null {

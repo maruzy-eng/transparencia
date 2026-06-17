@@ -11,6 +11,8 @@ import { Select } from "@/components/ui/select";
 import {
   MEDIA_TYPES,
   VISIBILITY_OPTIONS,
+  isImageMediaType,
+  mediaTypeLabel,
   visibilityLabel,
 } from "@/lib/admin/property-constants";
 import type { PropertyMedia } from "@/lib/transparency/types";
@@ -76,7 +78,7 @@ export function PropertyMediaEditor({
               key={item.id}
               className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white"
             >
-              {item.media_type === "photo" ? (
+              {isImageMediaType(item.media_type) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={item.url}
@@ -99,7 +101,8 @@ export function PropertyMediaEditor({
                       {item.caption || item.url}
                     </p>
                     <p className="text-xs text-[#64748B]">
-                      {item.media_type} · {visibilityLabel(item.visibility)}
+                      {mediaTypeLabel(item.media_type)} ·{" "}
+                      {visibilityLabel(item.visibility)}
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -141,10 +144,10 @@ export function PropertyMediaEditor({
               <Input name="file" type="file" accept="image/*,video/*" required />
             </Field>
             <Field label="Tipo">
-              <Select name="media_type" defaultValue="photo">
+              <Select name="media_type" defaultValue="image">
                 {MEDIA_TYPES.map((type) => (
                   <option key={type} value={type}>
-                    {type === "photo" ? "Foto" : "Vídeo"}
+                    {mediaTypeLabel(type)}
                   </option>
                 ))}
               </Select>
@@ -194,10 +197,15 @@ function MediaUrlForm({
         <Input name="url" type="url" defaultValue={item?.url ?? ""} required />
       </Field>
       <Field label="Tipo">
-        <Select name="media_type" defaultValue={item?.media_type ?? "photo"}>
+        <Select
+          name="media_type"
+          defaultValue={
+            item?.media_type === "video" ? "video" : "image"
+          }
+        >
           {MEDIA_TYPES.map((type) => (
             <option key={type} value={type}>
-              {type === "photo" ? "Foto" : "Vídeo"}
+              {mediaTypeLabel(type)}
             </option>
           ))}
         </Select>

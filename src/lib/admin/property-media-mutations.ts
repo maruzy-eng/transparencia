@@ -3,6 +3,10 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 
 import { getAdminPropertyById } from "@/lib/admin/property-queries";
+import {
+  normalizeMediaType,
+  type MediaType,
+} from "@/lib/admin/property-constants";
 import { mediaFormSchema } from "@/lib/admin/property-schema";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -16,6 +20,19 @@ function revalidateMediaPaths(propertyId: string) {
   revalidatePath("/admin/dashboard");
   revalidatePath("/transparency");
   revalidatePath(`/admin/properties/${propertyId}/edit`);
+}
+
+function mapMediaError(message: string): string {
+  if (message.includes("property_media_media_type_check")) {
+    return "Tipo de mídia inválido. Use Foto ou Vídeo.";
+  }
+  return message;
+}
+
+function resolveUploadMediaType(file: File, selected: string): MediaType {
+  if (file.type.startsWith("video/")) return "video";
+  if (file.type.startsWith("image/")) return "image";
+  return normalizeMediaType(selected);
 }
 
 async function deleteStorageFile(url: string) {
@@ -54,7 +71,7 @@ export async function persistMediaFromFormData(
   const supabase = createAdminClient();
   const payload = {
     property_id: propertyId,
-    media_type: values.media_type,
+    media_type: normalizeMediaType(values.media_type),
     url: values.url.trim(),
     thumbnail_url: values.thumbnail_url?.trim() || null,
     phase: values.phase?.trim() || null,
@@ -68,10 +85,10 @@ export async function persistMediaFromFormData(
       .from("property_media")
       .update(payload)
       .eq("id", values.id);
-    if (error) return { success: false, error: error.message };
+    if (error) return { success: false, error: mapMediaError(error.message) };
   } else {
     const { error } = await supabase.from("property_media").insert(payload);
-    if (error) return { success: false, error: error.message };
+    if (error) return { success: false, error: mapMediaError(error.message) };
   }
 
   await supabase
@@ -88,7 +105,10 @@ export async function uploadMediaFromFormData(
   formData: FormData,
 ): Promise<MediaMutationResult> {
   const file = formData.get("file");
-  const mediaType = String(formData.get("media_type") ?? "photo");
+  const mediaType = resolveUploadMediaType(
+    file instanceof File ? file : new File([], "empty"),
+    String(formData.get("media_type") ?? "image"),
+  );
   const visibility = String(formData.get("visibility") ?? "public");
   const caption = String(formData.get("caption") ?? "").trim();
 
@@ -132,7 +152,7 @@ export async function uploadMediaFromFormData(
   });
 
   if (insertError) {
-    return { success: false, error: insertError.message };
+    return { success: false, error: mapMediaError(insertError.message) };
   }
 
   await supabase

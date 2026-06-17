@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 
 import { VideoPlayer } from "@/components/transparency/video-player";
+import { isImageMediaType } from "@/lib/admin/property-constants";
 import { cn } from "@/lib/utils";
 import type { PropertyMedia } from "@/lib/transparency/types";
 
@@ -16,7 +17,7 @@ function isVideo(item: PropertyMedia): boolean {
 }
 
 function isPhoto(item: PropertyMedia): boolean {
-  return item.media_type === "photo" || item.media_type === "image";
+  return isImageMediaType(item.media_type);
 }
 
 function MediaMeta({ item }: { item: PropertyMedia }) {
@@ -40,8 +41,8 @@ function MediaMeta({ item }: { item: PropertyMedia }) {
 
 function GalleryVideo({ item }: { item: PropertyMedia }) {
   return (
-    <div className="space-y-3">
-      <VideoPlayer item={item} className="max-h-[420px]" />
+    <div className="min-w-0 space-y-2">
+      <VideoPlayer item={item} />
       <MediaMeta item={item} />
     </div>
   );
@@ -128,7 +129,7 @@ export function MediaGallery({ media }: MediaGalleryProps) {
 
   if (videos.length === 0 && photos.length === 0) {
     return (
-      <section className="rounded-[20px] border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_24px_rgba(15,23,42,0.04)] sm:p-6">
+      <section className="min-w-0 overflow-hidden rounded-[20px] border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_24px_rgba(15,23,42,0.04)] sm:p-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold tracking-tight text-[#0F172A]">
             Fotos e vídeos do projeto
@@ -146,8 +147,8 @@ export function MediaGallery({ media }: MediaGalleryProps) {
   }
 
   return (
-    <section className="rounded-[20px] border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_24px_rgba(15,23,42,0.04)] sm:p-6">
-      <div className="mb-6">
+    <section className="min-w-0 overflow-hidden rounded-[20px] border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_24px_rgba(15,23,42,0.04)] sm:p-6">
+      <div className="mb-5 sm:mb-6">
         <h2 className="text-lg font-semibold tracking-tight text-[#0F172A]">
           Fotos e vídeos do projeto
         </h2>
@@ -157,13 +158,13 @@ export function MediaGallery({ media }: MediaGalleryProps) {
         </p>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {videos.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-[#64748B]">
               Vídeos
             </h3>
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               {videos.map((item) => (
                 <GalleryVideo key={item.id} item={item} />
               ))}
@@ -172,7 +173,7 @@ export function MediaGallery({ media }: MediaGalleryProps) {
         )}
 
         {photos.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {videos.length > 0 && (
               <h3 className="text-sm font-semibold uppercase tracking-wide text-[#64748B]">
                 Fotos
