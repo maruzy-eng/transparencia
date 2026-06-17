@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { PlayCircle } from "lucide-react";
 
+import { VideoPlayer } from "@/components/transparency/video-player";
 import { cn } from "@/lib/utils";
 import type { PropertyMedia } from "@/lib/transparency/types";
 
@@ -17,23 +17,6 @@ function isVideo(item: PropertyMedia): boolean {
 
 function isPhoto(item: PropertyMedia): boolean {
   return item.media_type === "photo" || item.media_type === "image";
-}
-
-function getYoutubeEmbedUrl(url: string): string | null {
-  const patterns = [
-    /youtube\.com\/watch\?v=([^&]+)/,
-    /youtu\.be\/([^?]+)/,
-    /youtube\.com\/embed\/([^?]+)/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match?.[1]) {
-      return `https://www.youtube.com/embed/${match[1]}`;
-    }
-  }
-
-  return null;
 }
 
 function MediaMeta({ item }: { item: PropertyMedia }) {
@@ -55,32 +38,10 @@ function MediaMeta({ item }: { item: PropertyMedia }) {
   );
 }
 
-function VideoPlayer({ item }: { item: PropertyMedia }) {
-  const embedUrl = getYoutubeEmbedUrl(item.url);
-
+function GalleryVideo({ item }: { item: PropertyMedia }) {
   return (
     <div className="space-y-3">
-      <div className="group relative aspect-video max-h-[420px] overflow-hidden rounded-[16px] border border-[#E2E8F0] bg-[#F8FAFC]">
-        {embedUrl ? (
-          <iframe
-            src={embedUrl}
-            title={item.caption ?? "Vídeo do imóvel"}
-            className="h-full w-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        ) : (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex h-full flex-col items-center justify-center gap-3 text-[#64748B] transition-colors hover:text-[#0F172A]"
-          >
-            <PlayCircle className="h-14 w-14 text-[#39AFF2]" />
-            <span className="text-sm font-medium">Abrir vídeo</span>
-          </a>
-        )}
-      </div>
+      <VideoPlayer item={item} className="max-h-[420px]" />
       <MediaMeta item={item} />
     </div>
   );
@@ -204,7 +165,7 @@ export function MediaGallery({ media }: MediaGalleryProps) {
             </h3>
             <div className="space-y-6">
               {videos.map((item) => (
-                <VideoPlayer key={item.id} item={item} />
+                <GalleryVideo key={item.id} item={item} />
               ))}
             </div>
           </div>

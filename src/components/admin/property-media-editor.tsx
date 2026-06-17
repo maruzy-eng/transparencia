@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
+import { VideoPlayer } from "@/components/transparency/video-player";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,9 +84,7 @@ export function PropertyMediaEditor({
                   className="h-40 w-full object-cover"
                 />
               ) : (
-                <div className="flex h-40 items-center justify-center bg-[#F8FAFC] text-sm text-[#64748B]">
-                  Vídeo
-                </div>
+                <VideoPlayer item={item} variant="compact" />
               )}
               <div className="space-y-3 p-4">
                 {editingId === item.id ? (
