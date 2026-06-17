@@ -2,7 +2,11 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
-import { getCurrentAdmin, clearSessionCookie } from "@/lib/admin/session";
+import {
+  clearSessionCookie,
+  resolveAdminSession,
+  type AdminSessionResolution,
+} from "@/lib/admin/session";
 import type { AdminUser } from "@/lib/admin/types";
 
 export class AdminPermissionError extends Error {
@@ -12,23 +16,57 @@ export class AdminPermissionError extends Error {
   }
 }
 
-async function redirectToLogin(): Promise<never> {
-  await clearSessionCookie();
+function logPermissionDecision(
+  fn: string,
+  session: AdminSessionResolution,
+): void {
+  console.info("[admin-auth]", {
+    event: "permission_check",
+    fn,
+    kind: session.kind,
+    ...(session.kind === "invalid_session" ? { reason: session.reason } : {}),
+  });
+}
+
+async function handleMissingSession(
+  session: AdminSessionResolution,
+): Promise<never> {
+  if (session.kind === "invalid_session") {
+    await clearSessionCookie();
+  }
+
+  if (session.kind === "env_error") {
+    console.error("[admin-auth]", {
+      event: "env_misconfigured_block",
+      context: "requireAdminOrEditor",
+    });
+    throw new Error(session.message);
+  }
+
   redirect("/admin/login");
 }
 
-export async function requireAdminOrEditor(): Promise<AdminUser> {
-  const admin = await getCurrentAdmin();
-
-  if (!admin) {
-    return redirectToLogin();
+function sessionErrorMessage(session: AdminSessionResolution): string {
+  if (session.kind === "env_error") {
+    return session.message;
   }
 
-  if (admin.role !== "admin" && admin.role !== "editor") {
+  return "Sessão expirada. Faça login novamente para continuar.";
+}
+
+export async function requireAdminOrEditor(): Promise<AdminUser> {
+  const session = await resolveAdminSession();
+  logPermissionDecision("requireAdminOrEditor", session);
+
+  if (session.kind !== "authenticated") {
+    return handleMissingSession(session);
+  }
+
+  if (session.admin.role !== "admin" && session.admin.role !== "editor") {
     throw new AdminPermissionError();
   }
 
-  return admin;
+  return session.admin;
 }
 
 export type AdminActionAuthResult =
@@ -36,20 +74,18 @@ export type AdminActionAuthResult =
   | { ok: false; error: string };
 
 export async function requireAdminOrEditorForAction(): Promise<AdminActionAuthResult> {
-  const admin = await getCurrentAdmin();
+  const session = await resolveAdminSession();
+  logPermissionDecision("requireAdminOrEditorForAction", session);
 
-  if (!admin) {
-    return {
-      ok: false,
-      error: "Sessão expirada. Faça login novamente para continuar.",
-    };
+  if (session.kind !== "authenticated") {
+    return { ok: false, error: sessionErrorMessage(session) };
   }
 
-  if (admin.role !== "admin" && admin.role !== "editor") {
+  if (session.admin.role !== "admin" && session.admin.role !== "editor") {
     return { ok: false, error: "Acesso não autorizado." };
   }
 
-  return { ok: true, admin };
+  return { ok: true, admin: session.admin };
 }
 
 export async function requireAdminForAction(): Promise<AdminActionAuthResult> {

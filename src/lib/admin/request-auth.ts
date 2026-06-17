@@ -4,8 +4,9 @@ import type { NextRequest } from "next/server";
 
 import { ADMIN_SESSION_COOKIE } from "@/lib/admin/cookie-options";
 import {
-  getCurrentAdminFromToken,
   getSessionTokenFromCookieHeader,
+  resolveAdminSessionFromToken,
+  type AdminSessionResolution,
 } from "@/lib/admin/session";
 import type { AdminUser } from "@/lib/admin/types";
 
@@ -26,13 +27,25 @@ export function getSessionTokenFromRequest(
   return null;
 }
 
+export async function resolveAdminSessionFromRequest(
+  request: Request | NextRequest,
+): Promise<AdminSessionResolution> {
+  const token = getSessionTokenFromRequest(request);
+  const session = await resolveAdminSessionFromToken(token);
+
+  console.info("[admin-auth]", {
+    event: "request_session",
+    kind: session.kind,
+    hasToken: Boolean(token),
+    ...(session.kind === "invalid_session" ? { reason: session.reason } : {}),
+  });
+
+  return session;
+}
+
 export async function getCurrentAdminFromRequest(
   request: Request | NextRequest,
 ): Promise<AdminUser | null> {
-  const token = getSessionTokenFromRequest(request);
-  if (!token) {
-    return null;
-  }
-
-  return getCurrentAdminFromToken(token);
+  const session = await resolveAdminSessionFromRequest(request);
+  return session.kind === "authenticated" ? session.admin : null;
 }

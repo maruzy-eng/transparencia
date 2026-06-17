@@ -6,10 +6,11 @@ import {
   getSessionCookieOptions,
 } from "@/lib/admin/cookie-options";
 import {
-  getCurrentAdminFromRequest,
   getSessionTokenFromRequest,
+  resolveAdminSessionFromRequest,
 } from "@/lib/admin/request-auth";
 import { rotateSessionToken } from "@/lib/admin/session";
+import type { AdminSessionResolution } from "@/lib/admin/session";
 import type { AdminUser } from "@/lib/admin/types";
 
 export async function attachSessionCookie(
@@ -42,7 +43,7 @@ export function clearSessionCookie(response: NextResponse): NextResponse {
 export async function redirectToLogin(
   request: Request,
   nextPath: string,
-  clearCookie = true,
+  clearCookie = false,
 ): Promise<NextResponse> {
   const response = NextResponse.redirect(
     new URL(
@@ -59,6 +60,45 @@ export async function redirectToLogin(
   return response;
 }
 
+function logApiAuthDecision(
+  nextPath: string,
+  session: AdminSessionResolution,
+): void {
+  console.info("[admin-auth]", {
+    event: "api_auth",
+    nextPath,
+    kind: session.kind,
+    ...(session.kind === "invalid_session" ? { reason: session.reason } : {}),
+  });
+}
+
+async function unauthenticatedApiResponse(
+  request: Request,
+  nextPath: string,
+  session: AdminSessionResolution,
+): Promise<NextResponse> {
+  if (session.kind === "env_error") {
+    console.error("[admin-auth]", {
+      event: "env_misconfigured_block",
+      context: "api_route",
+      nextPath,
+    });
+    return NextResponse.redirect(
+      new URL(
+        `/admin/login?error=${encodeURIComponent(session.message)}`,
+        request.url,
+      ),
+      303,
+    );
+  }
+
+  return redirectToLogin(
+    request,
+    nextPath,
+    session.kind === "invalid_session",
+  );
+}
+
 export async function requireAdminApi(
   request: Request,
   nextPath: string,
@@ -66,14 +106,26 @@ export async function requireAdminApi(
   | { admin: AdminUser; response: null }
   | { admin: null; response: NextResponse }
 > {
-  const admin = await getCurrentAdminFromRequest(request);
-  if (!admin) {
+  const session = await resolveAdminSessionFromRequest(request);
+  logApiAuthDecision(nextPath, session);
+
+  if (session.kind !== "authenticated") {
     return {
       admin: null,
-      response: await redirectToLogin(request, nextPath),
+      response: await unauthenticatedApiResponse(request, nextPath, session),
     };
   }
-  return { admin, response: null };
+
+  if (session.admin.role !== "admin" && session.admin.role !== "editor") {
+    return {
+      admin: null,
+      response: await adminRedirect(request, nextPath, {
+        error: "Acesso não autorizado.",
+      }),
+    };
+  }
+
+  return { admin: session.admin, response: null };
 }
 
 export async function requireStrictAdminApi(

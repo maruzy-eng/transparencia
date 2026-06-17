@@ -11,7 +11,11 @@ import {
   getSessionCookieOptions,
 } from "@/lib/admin/cookie-options";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdminAuthSecret, getAdminEnvErrorMessage } from "@/lib/env/server";
+import {
+  getAdminAuthSecret,
+  getAdminEnvErrorMessage,
+  getMissingAdminEnvVars,
+} from "@/lib/env/server";
 import type {
   AdminSessionPayload,
   AdminUser,
@@ -24,6 +28,22 @@ export type AdminUserLookupResult =
   | { admin: AdminUser; error: null }
   | { admin: null; error: null }
   | { admin: null; error: string };
+
+export type AdminSessionResolution =
+  | { kind: "authenticated"; admin: AdminUser }
+  | { kind: "no_session" }
+  | {
+      kind: "invalid_session";
+      reason: "invalid_jwt" | "inactive_user" | "deleted_user";
+    }
+  | { kind: "env_error"; message: string };
+
+function logAdminAuth(
+  event: string,
+  detail: Record<string, string | boolean | undefined> = {},
+): void {
+  console.info("[admin-auth]", { event, ...detail });
+}
 
 function getSecretKey(): Uint8Array {
   return new TextEncoder().encode(getAdminAuthSecret());
@@ -129,37 +149,78 @@ export function getSessionTokenFromCookieHeader(
   return null;
 }
 
-export async function getCurrentAdminFromToken(
-  token: string,
-): Promise<AdminUser | null> {
-  let payload: AdminSessionPayload | null = null;
-
-  try {
-    if (getAdminEnvErrorMessage()) {
-      return null;
-    }
-    payload = await verifySessionToken(token);
-  } catch {
-    return null;
+export async function resolveAdminSessionFromToken(
+  token: string | null | undefined,
+): Promise<AdminSessionResolution> {
+  const trimmed = token?.trim();
+  if (!trimmed) {
+    logAdminAuth("no_session");
+    return { kind: "no_session" };
   }
 
+  const envError = getAdminEnvErrorMessage();
+  if (envError) {
+    console.error("[admin-auth]", {
+      event: "env_misconfigured",
+      missing: getMissingAdminEnvVars().join(","),
+    });
+    return { kind: "env_error", message: envError };
+  }
+
+  const payload = await verifySessionToken(trimmed);
   if (!payload) {
-    return null;
+    logAdminAuth("invalid_session", { reason: "invalid_jwt" });
+    return { kind: "invalid_session", reason: "invalid_jwt" };
   }
 
   try {
     const lookup = await lookupAdminUserById(payload.sub);
     if (lookup.admin) {
       if (lookup.admin.status !== "active") {
-        return null;
+        logAdminAuth("invalid_session", {
+          reason: "inactive_user",
+          userId: payload.sub,
+        });
+        return { kind: "invalid_session", reason: "inactive_user" };
       }
-      return lookup.admin;
+      logAdminAuth("authenticated", { userId: payload.sub, source: "db" });
+      return { kind: "authenticated", admin: lookup.admin };
     }
+
+    if (!lookup.error) {
+      logAdminAuth("invalid_session", {
+        reason: "deleted_user",
+        userId: payload.sub,
+      });
+      return { kind: "invalid_session", reason: "deleted_user" };
+    }
+
+    logAdminAuth("authenticated", {
+      userId: payload.sub,
+      source: "jwt_fallback",
+      dbUnavailable: true,
+    });
   } catch {
-    // Sessão válida no JWT mesmo se o banco estiver indisponível.
+    logAdminAuth("authenticated", {
+      userId: payload.sub,
+      source: "jwt_fallback",
+      dbException: true,
+    });
   }
 
-  return adminFromSessionPayload(payload);
+  return { kind: "authenticated", admin: adminFromSessionPayload(payload) };
+}
+
+export async function resolveAdminSession(): Promise<AdminSessionResolution> {
+  const token = await getSessionTokenFromCookie();
+  return resolveAdminSessionFromToken(token);
+}
+
+export async function getCurrentAdminFromToken(
+  token: string,
+): Promise<AdminUser | null> {
+  const session = await resolveAdminSessionFromToken(token);
+  return session.kind === "authenticated" ? session.admin : null;
 }
 
 export async function refreshSessionCookie(): Promise<void> {
@@ -248,12 +309,8 @@ export async function getAdminUserByEmail(
 }
 
 export async function getCurrentAdmin(): Promise<AdminUser | null> {
-  const token = await getSessionTokenFromCookie();
-  if (!token) {
-    return null;
-  }
-
-  return getCurrentAdminFromToken(token);
+  const session = await resolveAdminSession();
+  return session.kind === "authenticated" ? session.admin : null;
 }
 
 export async function updateLastLoginAt(adminId: string): Promise<void> {
