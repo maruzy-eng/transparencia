@@ -12,15 +12,26 @@ function FinancialMetric({
   label,
   value,
   valueClassName,
-}: FinancialMetricProps) {
+  compact = false,
+}: FinancialMetricProps & { compact?: boolean }) {
   return (
-    <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-[#64748B] sm:text-[11px]">
+    <div className="min-w-0 overflow-hidden">
+      <p
+        className={cn(
+          "font-medium uppercase tracking-wide text-[#64748B]",
+          compact
+            ? "truncate text-[9px] leading-tight sm:text-[10px]"
+            : "text-[10px] sm:text-[11px]",
+        )}
+      >
         {label}
       </p>
       <p
         className={cn(
-          "mt-1 text-[13px] font-semibold leading-tight break-words sm:text-sm",
+          "mt-0.5 font-semibold leading-tight tabular-nums",
+          compact
+            ? "truncate text-[10px] sm:text-[11px]"
+            : "break-words text-[13px] sm:text-sm",
           valueClassName ?? "text-[#0F172A]",
         )}
       >
@@ -45,32 +56,35 @@ export function PropertyFinancialMetrics({
   className,
   valueSize = "default",
 }: PropertyFinancialMetricsProps) {
-  const valueClasses =
-    valueSize === "featured"
-      ? "mt-1 text-[13px] font-semibold leading-tight break-words sm:text-sm lg:text-base"
-      : undefined;
+  const compact = valueSize === "featured";
 
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-x-3 gap-y-4 border-t border-[#E2E8F0] pt-4 sm:grid-cols-3 sm:gap-x-4",
+        "grid border-t border-[#E2E8F0] pt-4",
+        compact
+          ? "grid-cols-3 gap-x-2 gap-y-3 pt-0"
+          : "grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 sm:gap-x-4",
         className,
       )}
     >
       <FinancialMetric
         label="Compra"
         value={purchasePrice}
-        valueClassName={cn(valueClasses, "text-[#0F172A]")}
+        compact={compact}
+        valueClassName="text-[#0F172A]"
       />
       <FinancialMetric
         label="Venda proj."
         value={estimatedSalePrice}
-        valueClassName={cn(valueClasses, "text-[#0F172A]")}
+        compact={compact}
+        valueClassName="text-[#0F172A]"
       />
       <FinancialMetric
         label="Lucro est."
         value={estimatedProfit}
-        valueClassName={cn(valueClasses, "text-[#53BC76]")}
+        compact={compact}
+        valueClassName="text-[#53BC76]"
       />
     </div>
   );

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,11 +12,6 @@ import {
   VISIBILITY_OPTIONS,
   visibilityLabel,
 } from "@/lib/admin/property-constants";
-import {
-  deleteMediaAction,
-  saveMediaAction,
-  uploadPropertyMediaAction,
-} from "@/lib/admin/property-actions";
 import type { PropertyMedia } from "@/lib/transparency/types";
 
 interface PropertyMediaEditorProps {
@@ -29,46 +23,43 @@ export function PropertyMediaEditor({
   propertyId,
   media,
 }: PropertyMediaEditorProps) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const saveAction = `/api/admin/properties/${propertyId}/media`;
 
-  function handleSave(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      const result = await saveMediaAction(propertyId, formData);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao salvar mídia.");
-        return;
-      }
-      setEditingId(null);
-      router.refresh();
-    });
-  }
-
-  function handleUpload(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      const result = await uploadPropertyMediaAction(propertyId, formData);
-      if (!result.success) {
-        setError(result.error ?? "Erro no upload.");
-        return;
-      }
-      router.refresh();
-    });
-  }
-
-  function handleDelete(item: PropertyMedia) {
+  async function handleDelete(item: PropertyMedia) {
     if (!confirm("Remover esta mídia?")) return;
-    startTransition(async () => {
-      const result = await deleteMediaAction(propertyId, item.id, item.url);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao remover mídia.");
+
+    setDeletingId(item.id);
+    try {
+      const deleteUrl = new URL(
+        `/api/admin/properties/${propertyId}/media/${item.id}`,
+        window.location.origin,
+      );
+      if (item.url.includes("/storage/v1/object/public/property-media/")) {
+        deleteUrl.searchParams.set("url", item.url);
+      }
+
+      const response = await fetch(deleteUrl.toString(), {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+
+      if (response.redirected) {
+        window.location.href = response.url;
         return;
       }
-      router.refresh();
-    });
+
+      if (!response.ok) {
+        throw new Error("Não foi possível remover a mídia.");
+      }
+
+      window.location.reload();
+    } catch {
+      window.location.href = `/admin/properties/${propertyId}/edit?tab=media&error=${encodeURIComponent("Erro ao remover mídia.")}`;
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -99,9 +90,8 @@ export function PropertyMediaEditor({
               <div className="space-y-3 p-4">
                 {editingId === item.id ? (
                   <MediaUrlForm
+                    action={saveAction}
                     item={item}
-                    pending={pending}
-                    onSubmit={handleSave}
                     onCancel={() => setEditingId(null)}
                   />
                 ) : (
@@ -125,6 +115,7 @@ export function PropertyMediaEditor({
                         type="button"
                         size="sm"
                         variant="outline"
+                        disabled={deletingId === item.id}
                         onClick={() => handleDelete(item)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -141,7 +132,12 @@ export function PropertyMediaEditor({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-dashed border-[#E2E8F0] p-4">
           <p className="mb-3 text-sm font-medium text-[#0F172A]">Upload de arquivo</p>
-          <form action={handleUpload} className="space-y-3">
+          <form
+            action={saveAction}
+            method="POST"
+            encType="multipart/form-data"
+            className="space-y-3"
+          >
             <Field label="Arquivo">
               <Input name="file" type="file" accept="image/*,video/*" required />
             </Field>
@@ -166,36 +162,34 @@ export function PropertyMediaEditor({
             <Field label="Legenda">
               <Input name="caption" placeholder="Opcional" />
             </Field>
-            <Button type="submit" size="sm" disabled={pending}>
-              {pending ? "Enviando..." : "Fazer upload"}
+            <Button type="submit" size="sm">
+              Fazer upload
             </Button>
           </form>
         </div>
 
         <div className="rounded-xl border border-dashed border-[#E2E8F0] p-4">
           <p className="mb-3 text-sm font-medium text-[#0F172A]">Adicionar por URL</p>
-          <MediaUrlForm pending={pending} onSubmit={handleSave} />
+          <MediaUrlForm action={saveAction} submitLabel="Adicionar URL" />
         </div>
       </div>
-
-      {error ? <p className="text-sm text-[#B91C1C]">{error}</p> : null}
     </div>
   );
 }
 
 function MediaUrlForm({
+  action,
   item,
-  pending,
-  onSubmit,
+  submitLabel,
   onCancel,
 }: {
+  action: string;
   item?: PropertyMedia;
-  pending: boolean;
-  onSubmit: (formData: FormData) => void;
+  submitLabel?: string;
   onCancel?: () => void;
 }) {
   return (
-    <form action={onSubmit} className="space-y-3">
+    <form action={action} method="POST" className="space-y-3">
       {item?.id ? <input type="hidden" name="id" value={item.id} /> : null}
       <Field label="URL">
         <Input name="url" type="url" defaultValue={item?.url ?? ""} required />
@@ -222,8 +216,8 @@ function MediaUrlForm({
         <Input name="caption" defaultValue={item?.caption ?? ""} />
       </Field>
       <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={pending}>
-          {pending ? "Salvando..." : item ? "Atualizar mídia" : "Adicionar URL"}
+        <Button type="submit" size="sm">
+          {submitLabel ?? (item ? "Atualizar mídia" : "Adicionar URL")}
         </Button>
         {onCancel ? (
           <Button type="button" size="sm" variant="outline" onClick={onCancel}>

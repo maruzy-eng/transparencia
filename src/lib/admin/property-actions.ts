@@ -9,7 +9,11 @@ import {
   persistPhaseFromFormData,
 } from "@/lib/admin/property-phase-mutations";
 import {
-  mediaFormSchema,
+  deleteMediaById,
+  persistMediaFromFormData,
+  uploadMediaFromFormData,
+} from "@/lib/admin/property-media-mutations";
+import {
   propertyFormSchema,
   toPropertyInsert,
   updateFormSchema,
@@ -206,16 +210,6 @@ export async function deletePropertyAction(
   redirect("/admin/properties");
 }
 
-async function deleteStorageFile(url: string) {
-  const marker = "/storage/v1/object/public/property-media/";
-  const index = url.indexOf(marker);
-  if (index === -1) return;
-
-  const path = url.slice(index + marker.length);
-  const supabase = createAdminClient();
-  await supabase.storage.from("property-media").remove([path]);
-}
-
 export async function savePhaseAction(
   propertyId: string,
   formData: FormData,
@@ -326,49 +320,13 @@ export async function saveMediaAction(
   const authError = await assertAdminAction();
   if (authError) return authError;
 
-  const parsed = mediaFormSchema.safeParse({
-    id: formData.get("id") || undefined,
-    media_type: formData.get("media_type"),
-    url: formData.get("url"),
-    thumbnail_url: formData.get("thumbnail_url") || undefined,
-    phase: formData.get("phase") || undefined,
-    room: formData.get("room") || undefined,
-    caption: formData.get("caption") || undefined,
-    visibility: formData.get("visibility"),
-  });
-
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dados inválidos.",
-    };
+  const result = await persistMediaFromFormData(propertyId, formData);
+  if (!result.success) {
+    return { success: false, error: result.error };
   }
 
-  const values = parsed.data;
-  const supabase = createAdminClient();
-  const payload = {
-    property_id: propertyId,
-    media_type: values.media_type,
-    url: values.url.trim(),
-    thumbnail_url: values.thumbnail_url?.trim() || null,
-    phase: values.phase?.trim() || null,
-    room: values.room?.trim() || null,
-    caption: values.caption?.trim() || null,
-    visibility: values.visibility,
-  };
-
-  if (values.id) {
-    const { error } = await supabase
-      .from("property_media")
-      .update(payload)
-      .eq("id", values.id);
-    if (error) return { success: false, error: error.message };
-  } else {
-    const { error } = await supabase.from("property_media").insert(payload);
-    if (error) return { success: false, error: error.message };
-  }
-
-  return completeAdminAction(propertyId);
+  await refreshSessionCookie();
+  return { success: true };
 }
 
 export async function deleteMediaAction(
@@ -378,22 +336,14 @@ export async function deleteMediaAction(
 ): Promise<ActionResult> {
   const authError = await assertAdminAction();
   if (authError) return authError;
-  const supabase = createAdminClient();
 
-  const { error } = await supabase
-    .from("property_media")
-    .delete()
-    .eq("id", mediaId);
-
-  if (error) {
-    return { success: false, error: error.message };
+  const result = await deleteMediaById(propertyId, mediaId, mediaUrl);
+  if (!result.success) {
+    return { success: false, error: result.error };
   }
 
-  if (mediaUrl) {
-    await deleteStorageFile(mediaUrl);
-  }
-
-  return completeAdminAction(propertyId);
+  await refreshSessionCookie();
+  return { success: true };
 }
 
 export async function uploadPropertyMediaAction(
@@ -403,55 +353,13 @@ export async function uploadPropertyMediaAction(
   const authError = await assertAdminAction();
   if (authError) return authError;
 
-  const file = formData.get("file");
-  const mediaType = String(formData.get("media_type") ?? "photo");
-  const visibility = String(formData.get("visibility") ?? "public");
-  const caption = String(formData.get("caption") ?? "").trim();
-
-  if (!(file instanceof File) || file.size === 0) {
-    return { success: false, error: "Selecione um arquivo para upload." };
+  const result = await uploadMediaFromFormData(propertyId, formData);
+  if (!result.success) {
+    return { success: false, error: result.error };
   }
 
-  const property = await getAdminPropertyById(propertyId);
-  if (!property) {
-    return { success: false, error: "Imóvel não encontrado." };
-  }
-
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const objectPath = `${propertyId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-  const supabase = createAdminClient();
-
-  const { error: uploadError } = await supabase.storage
-    .from("property-media")
-    .upload(objectPath, file, {
-      contentType: file.type,
-      upsert: false,
-    });
-
-  if (uploadError) {
-    return { success: false, error: uploadError.message };
-  }
-
-  const { data: publicData } = supabase.storage
-    .from("property-media")
-    .getPublicUrl(objectPath);
-
-  const { error: insertError } = await supabase.from("property_media").insert({
-    property_id: propertyId,
-    media_type: mediaType,
-    url: publicData.publicUrl,
-    thumbnail_url: null,
-    phase: null,
-    room: null,
-    caption: caption || null,
-    visibility,
-  });
-
-  if (insertError) {
-    return { success: false, error: insertError.message };
-  }
-
-  return completeAdminAction(propertyId);
+  await refreshSessionCookie();
+  return { success: true };
 }
 
 export async function uploadCoverImageAction(

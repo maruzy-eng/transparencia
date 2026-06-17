@@ -69,7 +69,11 @@ export default async function EditPropertyPage({
 
       {flashSaved ? (
         <p className="mb-4 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2 text-sm text-[#166534]">
-          Fase salva com sucesso.
+          {defaultTab === "phases"
+            ? "Fase salva com sucesso."
+            : defaultTab === "media"
+              ? "Mídia salva com sucesso."
+              : "Salvo com sucesso."}
         </p>
       ) : null}
 

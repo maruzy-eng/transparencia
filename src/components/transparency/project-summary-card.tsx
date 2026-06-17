@@ -9,7 +9,7 @@ interface ProjectSummaryCardProps {
 
 export function ProjectSummaryCard({ property }: ProjectSummaryCardProps) {
   return (
-    <div className="rounded-[18px] border border-[#E2E8F0]/80 bg-white/95 p-4 shadow-[0_8px_32px_rgba(15,23,42,0.08)] backdrop-blur-md sm:p-5">
+    <div className="min-w-0 overflow-hidden rounded-[18px] border border-[#E2E8F0]/80 bg-white/95 p-4 shadow-[0_8px_32px_rgba(15,23,42,0.08)] backdrop-blur-md sm:p-5">
       <PhaseProgress progress={property.progress} compact tone="brand" />
 
       <PropertyFinancialMetrics
