@@ -5,10 +5,15 @@ import { PropertyCard } from "@/components/transparency/property-card";
 
 interface PropertyGridProps {
   properties: Property[];
+  firstImageByPropertyId?: Record<string, string | null>;
   className?: string;
 }
 
-export function PropertyGrid({ properties, className }: PropertyGridProps) {
+export function PropertyGrid({
+  properties,
+  firstImageByPropertyId = {},
+  className,
+}: PropertyGridProps) {
   const isSingle = properties.length === 1;
   const highlightFirst = properties.length >= 3;
 
@@ -29,6 +34,7 @@ export function PropertyGrid({ properties, className }: PropertyGridProps) {
         >
           <PropertyCard
             property={property}
+            coverImageUrl={firstImageByPropertyId[property.id] ?? null}
             emphasized={highlightFirst && index === 0}
           />
         </div>

@@ -24,6 +24,47 @@ export async function getPublishedProperties(): Promise<Property[]> {
   return data ?? [];
 }
 
+export async function getFirstRegisteredImageUrlsByPropertyIds(
+  propertyIds: string[],
+): Promise<Record<string, string | null>> {
+  if (propertyIds.length === 0) {
+    return {};
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("property_media")
+    .select("property_id, url, media_type, created_at")
+    .in("property_id", propertyIds)
+    .eq("visibility", "public")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to fetch property media: ${error.message}`);
+  }
+
+  const coverByPropertyId: Record<string, string | null> = {};
+
+  for (const id of propertyIds) {
+    coverByPropertyId[id] = null;
+  }
+
+  for (const item of data ?? []) {
+    if (coverByPropertyId[item.property_id]) {
+      continue;
+    }
+
+    if (item.media_type === "video") {
+      continue;
+    }
+
+    coverByPropertyId[item.property_id] = item.url;
+  }
+
+  return coverByPropertyId;
+}
+
 export async function getPropertyBySlug(slug: string): Promise<Property | null> {
   const supabase = await createClient();
 

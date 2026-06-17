@@ -7,6 +7,7 @@ import type { Property } from "@/lib/transparency/types";
 
 interface TransparencyHeroProps {
   featuredProperty?: Property | null;
+  firstImageByPropertyId?: Record<string, string | null>;
   content: TransparencyPageContent["hero"];
   trustItems: TransparencyPageContent["trust"];
 }
@@ -15,6 +16,7 @@ const trustIcons = [Database, RefreshCw, Eye];
 
 export function TransparencyHero({
   featuredProperty,
+  firstImageByPropertyId = {},
   content,
   trustItems,
 }: TransparencyHeroProps) {
@@ -76,7 +78,10 @@ export function TransparencyHero({
         </div>
 
         {featuredProperty ? (
-          <FeaturedPropertyCard property={featuredProperty} />
+          <FeaturedPropertyCard
+            property={featuredProperty}
+            coverImageUrl={firstImageByPropertyId[featuredProperty.id] ?? null}
+          />
         ) : (
           <div className="rounded-[24px] border border-dashed border-[#E2E8F0] bg-white/70 p-10 text-center">
             <p className="text-sm text-[#64748B]">

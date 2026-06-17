@@ -4,7 +4,10 @@ import { PortfolioKpis } from "@/components/transparency/portfolio-kpis";
 import { PropertyListing } from "@/components/transparency/property-listing";
 import { TransparencyHero } from "@/components/transparency/transparency-hero";
 import { getTransparencyPageContent } from "@/lib/transparency/content";
-import { getPublishedProperties } from "@/lib/transparency/queries";
+import {
+  getFirstRegisteredImageUrlsByPropertyIds,
+  getPublishedProperties,
+} from "@/lib/transparency/queries";
 import { computePortfolioStats } from "@/lib/transparency/portfolio-stats";
 import type { Property } from "@/lib/transparency/types";
 
@@ -42,6 +45,9 @@ export default async function TransparencyPage() {
   }
 
   const publishedProperties = properties ?? [];
+  const firstImageByPropertyId = await getFirstRegisteredImageUrlsByPropertyIds(
+    publishedProperties.map((property) => property.id),
+  );
   const featuredProperty = publishedProperties[0] ?? null;
   const portfolioStats = computePortfolioStats(publishedProperties);
 
@@ -49,6 +55,7 @@ export default async function TransparencyPage() {
     <div className="space-y-14 sm:space-y-16 lg:space-y-20">
       <TransparencyHero
         featuredProperty={featuredProperty}
+        firstImageByPropertyId={firstImageByPropertyId}
         content={pageContent.hero}
         trustItems={pageContent.trust}
       />
@@ -65,6 +72,7 @@ export default async function TransparencyPage() {
       ) : (
         <PropertyListing
           properties={publishedProperties}
+          firstImageByPropertyId={firstImageByPropertyId}
           content={pageContent.projects}
         />
       )}

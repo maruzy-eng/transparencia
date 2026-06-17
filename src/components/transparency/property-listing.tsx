@@ -14,6 +14,7 @@ import type { Property } from "@/lib/transparency/types";
 
 interface PropertyListingProps {
   properties: Property[];
+  firstImageByPropertyId?: Record<string, string | null>;
   content: TransparencyPageContent["projects"];
 }
 
@@ -30,7 +31,11 @@ function filterProperties(
   return properties.filter((property) => property.status === filter);
 }
 
-export function PropertyListing({ properties, content }: PropertyListingProps) {
+export function PropertyListing({
+  properties,
+  firstImageByPropertyId = {},
+  content,
+}: PropertyListingProps) {
   const [filter, setFilter] = useState<PropertyFilterValue>("all");
 
   const filteredProperties = useMemo(
@@ -66,7 +71,10 @@ export function PropertyListing({ properties, content }: PropertyListingProps) {
           description="Tente outro filtro para visualizar os imóveis publicados."
         />
       ) : (
-        <PropertyGrid properties={filteredProperties} />
+        <PropertyGrid
+          properties={filteredProperties}
+          firstImageByPropertyId={firstImageByPropertyId}
+        />
       )}
     </section>
   );

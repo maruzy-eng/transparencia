@@ -9,21 +9,26 @@ import {
   formatCurrency,
   projectTypeLabel,
 } from "@/lib/transparency/labels";
+import { getPropertyListingCoverUrl } from "@/lib/transparency/media-helpers";
 import type { Property } from "@/lib/transparency/types";
 import { cn } from "@/lib/utils";
 
 interface PropertyCardProps {
   property: Property;
+  coverImageUrl?: string | null;
   className?: string;
   emphasized?: boolean;
 }
 
 export function PropertyCard({
   property,
+  coverImageUrl = null,
   className,
   emphasized = false,
 }: PropertyCardProps) {
   const location = [property.city, property.state].filter(Boolean).join(", ");
+  const imageUrl = getPropertyListingCoverUrl(property, coverImageUrl);
+  const propertyHref = `/transparency/${property.slug}`;
 
   return (
     <article
@@ -34,14 +39,16 @@ export function PropertyCard({
       )}
     >
       <div className="relative p-3 pb-0">
-        <div
+        <Link
+          href={propertyHref}
           className={cn(
-            "relative overflow-hidden rounded-[16px] bg-[#F8FAFC]",
+            "relative block overflow-hidden rounded-[16px] bg-[#F8FAFC]",
             emphasized ? "aspect-[16/9]" : "aspect-[16/10]",
           )}
+          aria-label={`Ver detalhes de ${property.name}`}
         >
           <PropertyCoverImage
-            src={property.cover_image_url}
+            src={imageUrl}
             alt={property.name}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             imageClassName="transition-transform duration-500 group-hover:scale-[1.015]"
@@ -49,7 +56,7 @@ export function PropertyCard({
           <div className="absolute left-3 top-3">
             <StatusBadge status={property.status} tone="light" />
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col px-5 pb-5 pt-4">
@@ -81,7 +88,7 @@ export function PropertyCard({
         </div>
 
         <Link
-          href={`/transparency/${property.slug}`}
+          href={propertyHref}
           className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#64748B] transition-colors group-hover:text-[#39AFF2]"
         >
           Ver detalhes
