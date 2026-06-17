@@ -116,13 +116,15 @@ export function AdminSidebar({ admin }: AdminSidebarProps) {
       </nav>
 
       <div className="border-t border-[#E2E8F0] p-3">
-        <Link
-          href="/admin/logout"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#64748B] transition-colors hover:bg-[#FEF2F2] hover:text-[#DC2626]"
-        >
-          <LogOut className="h-4 w-4" />
-          Sair
-        </Link>
+        <form action="/admin/logout" method="post">
+          <button
+            type="submit"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#64748B] transition-colors hover:bg-[#FEF2F2] hover:text-[#DC2626]"
+          >
+            <LogOut className="h-4 w-4" />
+            Sair
+          </button>
+        </form>
       </div>
     </aside>
   );

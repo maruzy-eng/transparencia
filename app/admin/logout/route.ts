@@ -1,9 +1,15 @@
 import { redirect } from "next/navigation";
 
-import { clearSessionCookie } from "@/lib/admin/session";
+import { clearSessionCookie, resolveAdminSession } from "@/lib/admin/session";
 
 export async function GET() {
-  await clearSessionCookie("app/admin/logout/route.ts:GET");
+  console.info("[admin-logout] GET ignored - logout requires POST");
+
+  const session = await resolveAdminSession();
+  if (session.kind === "authenticated") {
+    redirect("/admin/dashboard");
+  }
+
   redirect("/admin/login");
 }
 

@@ -9,7 +9,6 @@ import {
 } from "@/lib/admin/cookie-options";
 
 const ALLOWED_SESSION_CLEAR_CALLERS = new Set([
-  "app/admin/logout/route.ts:GET",
   "app/admin/logout/route.ts:POST",
 ]);
 
@@ -32,7 +31,7 @@ export async function clearSessionCookie(caller: string): Promise<void> {
     return;
   }
 
-  console.info("[admin-logout] clearing admin_session");
+  console.info("[admin-logout] clearing admin_session via POST");
 
   const cookieStore = await cookies();
   cookieStore.set(ADMIN_SESSION_COOKIE, "", getClearSessionCookieOptions());
