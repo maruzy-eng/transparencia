@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, MapPin } from "lucide-react";
 
-import { PropertyCoverImage } from "@/components/transparency/property-cover-image";
+import { PropertyCoverImage, PROPERTY_HOME_COVER_ASPECT_CLASS } from "@/components/transparency/property-cover-image";
 import { PropertyFinancialMetrics } from "@/components/transparency/property-financial-metrics";
 import { PhaseProgress } from "@/components/transparency/phase-progress";
 import { StatusBadge } from "@/components/transparency/status-badge";
@@ -11,6 +11,7 @@ import {
 } from "@/lib/transparency/labels";
 import { getPropertyListingCoverUrl } from "@/lib/transparency/media-helpers";
 import type { Property } from "@/lib/transparency/types";
+import { cn } from "@/lib/utils";
 
 interface FeaturedPropertyCardProps {
   property: Property;
@@ -29,7 +30,10 @@ export function FeaturedPropertyCard({
     <article className="relative min-w-0 overflow-hidden rounded-[24px] border border-[#E2E8F0] bg-white shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
       <Link
         href={propertyHref}
-        className="relative block aspect-[16/10] overflow-hidden bg-[#F8FAFC] sm:aspect-[16/9]"
+        className={cn(
+          "relative block overflow-hidden bg-[#F8FAFC]",
+          PROPERTY_HOME_COVER_ASPECT_CLASS,
+        )}
         aria-label={`Ver detalhes de ${property.name}`}
       >
         <PropertyCoverImage

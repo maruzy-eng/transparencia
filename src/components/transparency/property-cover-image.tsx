@@ -15,6 +15,8 @@ interface PropertyCoverImageProps {
   sizes?: string;
 }
 
+export const PROPERTY_HOME_COVER_ASPECT_CLASS = "aspect-[16/10]";
+
 export function PropertyCoverImage({
   src,
   alt,

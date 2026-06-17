@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, MapPin } from "lucide-react";
 
-import { PropertyCoverImage } from "@/components/transparency/property-cover-image";
+import { PropertyCoverImage, PROPERTY_HOME_COVER_ASPECT_CLASS } from "@/components/transparency/property-cover-image";
 import { PropertyFinancialMetrics } from "@/components/transparency/property-financial-metrics";
 import { PhaseProgress } from "@/components/transparency/phase-progress";
 import { StatusBadge } from "@/components/transparency/status-badge";
@@ -43,7 +43,7 @@ export function PropertyCard({
           href={propertyHref}
           className={cn(
             "relative block overflow-hidden rounded-[16px] bg-[#F8FAFC]",
-            emphasized ? "aspect-[16/9]" : "aspect-[16/10]",
+            PROPERTY_HOME_COVER_ASPECT_CLASS,
           )}
           aria-label={`Ver detalhes de ${property.name}`}
         >

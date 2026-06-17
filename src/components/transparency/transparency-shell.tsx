@@ -1,3 +1,4 @@
+import { TransparencyBottomNav } from "@/components/transparency/transparency-bottom-nav";
 import { TransparencyFooter } from "@/components/transparency/transparency-footer";
 import { TransparencyHeader } from "@/components/transparency/transparency-header";
 import type { TransparencyPageContent } from "@/lib/transparency/content-types";
@@ -18,7 +19,7 @@ export function TransparencyShell({
   footerContent,
 }: TransparencyShellProps) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#FAFBFC] text-[#0F172A]">
+    <div className="relative min-h-screen overflow-hidden bg-[#FAFBFC] pb-[calc(4.25rem+env(safe-area-inset-bottom))] text-[#0F172A] md:pb-0">
       <div className="transparency-page-bg pointer-events-none absolute inset-0" />
       <div className="transparency-shape transparency-shape-one" />
       <div className="transparency-shape transparency-shape-two" />
@@ -35,6 +36,7 @@ export function TransparencyShell({
       </main>
 
       <TransparencyFooter content={footerContent} settings={settings} />
+      <TransparencyBottomNav />
     </div>
   );
 }
