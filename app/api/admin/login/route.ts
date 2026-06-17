@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/admin/auth";
 import {
   ADMIN_SESSION_COOKIE,
+  getClearSessionCookieOptions,
   getSessionCookieOptions,
 } from "@/lib/admin/cookie-options";
 import { createSessionToken, updateLastLoginAt } from "@/lib/admin/session";
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
   await updateLastLoginAt(result.admin.id);
 
   const response = NextResponse.redirect(new URL(nextPath, request.url), 303);
+  response.cookies.set(ADMIN_SESSION_COOKIE, "", getClearSessionCookieOptions());
   response.cookies.set(ADMIN_SESSION_COOKIE, token, getSessionCookieOptions());
 
   return response;

@@ -12,12 +12,12 @@ export async function POST(request: Request) {
   const result = await createPropertyFromFormData(formData);
 
   if (!result.success || !result.propertyId) {
-    return adminRedirect(request, "/admin/properties/new", {
+    return await adminRedirect(request, "/admin/properties/new", {
       error: result.error ?? "Erro ao criar imóvel.",
     });
   }
 
-  return adminRedirect(
+  return await adminRedirect(
     request,
     `/admin/properties/${result.propertyId}/edit`,
     { saved: "1" },

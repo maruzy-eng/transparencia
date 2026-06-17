@@ -18,14 +18,14 @@ export async function DELETE(
   const result = await deleteUpdateById(propertyId, updateId);
 
   if (!result.success) {
-    return adminRedirect(
+    return await adminRedirect(
       request,
       `/admin/properties/${propertyId}/edit`,
       { tab: "updates", error: result.error ?? "Erro ao remover atualização." },
     );
   }
 
-  return adminRedirect(
+  return await adminRedirect(
     request,
     `/admin/properties/${propertyId}/edit`,
     { tab: "updates", saved: "1" },

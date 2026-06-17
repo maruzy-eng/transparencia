@@ -17,10 +17,10 @@ export async function POST(
   const result = await togglePropertyPublished(propertyId, isPublished);
 
   if (!result.success) {
-    return adminRedirect(request, "/admin/properties", {
+    return await adminRedirect(request, "/admin/properties", {
       error: result.error ?? "Erro ao atualizar publicação.",
     });
   }
 
-  return adminRedirect(request, "/admin/properties", { saved: "1" });
+  return await adminRedirect(request, "/admin/properties", { saved: "1" });
 }

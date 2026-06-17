@@ -22,13 +22,13 @@ export async function POST(
   const result = await updatePropertyFromFormData(propertyId, formData);
 
   if (!result.success) {
-    return adminRedirect(request, `/admin/properties/${propertyId}/edit`, {
+    return await adminRedirect(request, `/admin/properties/${propertyId}/edit`, {
       tab: "general",
       error: result.error ?? "Erro ao salvar imóvel.",
     });
   }
 
-  return adminRedirect(request, `/admin/properties/${propertyId}/edit`, {
+  return await adminRedirect(request, `/admin/properties/${propertyId}/edit`, {
     tab: "general",
     saved: "1",
   });
@@ -45,10 +45,10 @@ export async function DELETE(
   const result = await deletePropertyById(propertyId);
 
   if (!result.success) {
-    return adminRedirect(request, "/admin/properties", {
+    return await adminRedirect(request, "/admin/properties", {
       error: result.error ?? "Erro ao excluir imóvel.",
     });
   }
 
-  return adminRedirect(request, "/admin/properties", { saved: "1" });
+  return await adminRedirect(request, "/admin/properties", { saved: "1" });
 }

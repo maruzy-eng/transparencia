@@ -5,9 +5,16 @@ import { getAdminSiteContent } from "@/lib/admin/content-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminContentPage() {
+interface AdminContentPageProps {
+  searchParams: Promise<{ error?: string; saved?: string }>;
+}
+
+export default async function AdminContentPage({
+  searchParams,
+}: AdminContentPageProps) {
   const admin = await requireAdminOrEditor();
   const items = await getAdminSiteContent();
+  const query = await searchParams;
 
   return (
     <AdminShell
@@ -15,6 +22,19 @@ export default async function AdminContentPage() {
       title="Textos da página"
       description="Edite os textos exibidos no portal público /transparency."
     >
+      {query.error ? (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
+        >
+          {query.error}
+        </p>
+      ) : null}
+      {query.saved === "1" ? (
+        <p className="mb-4 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2 text-sm text-[#166534]">
+          Conteúdo salvo com sucesso.
+        </p>
+      ) : null}
       <ContentEditor items={items} />
     </AdminShell>
   );

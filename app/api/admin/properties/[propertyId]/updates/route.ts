@@ -19,14 +19,14 @@ export async function POST(
   const result = await persistUpdateFromFormData(propertyId, formData);
 
   if (!result.success) {
-    return adminRedirect(
+    return await adminRedirect(
       request,
       `/admin/properties/${propertyId}/edit`,
       { tab: "updates", error: result.error ?? "Erro ao salvar atualização." },
     );
   }
 
-  return adminRedirect(
+  return await adminRedirect(
     request,
     `/admin/properties/${propertyId}/edit`,
     { tab: "updates", saved: "1" },

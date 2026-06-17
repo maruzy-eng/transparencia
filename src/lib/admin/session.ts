@@ -164,12 +164,36 @@ export async function refreshSessionCookie(): Promise<void> {
     return;
   }
 
+  const rotated = await rotateSessionToken(token);
+  if (rotated) {
+    await setSessionCookie(rotated);
+    return;
+  }
+
   const payload = await verifySessionToken(token);
   if (!payload) {
     return;
   }
 
   await setSessionCookie(token);
+}
+
+export async function rotateSessionToken(token: string): Promise<string | null> {
+  if (getAdminEnvErrorMessage()) {
+    return null;
+  }
+
+  const payload = await verifySessionToken(token);
+  if (!payload) {
+    return null;
+  }
+
+  return createSessionToken({
+    id: payload.sub,
+    email: payload.email,
+    name: payload.name,
+    role: payload.role,
+  });
 }
 
 export async function lookupAdminUserById(

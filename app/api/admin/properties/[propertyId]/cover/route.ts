@@ -19,13 +19,13 @@ export async function POST(
   const result = await uploadCoverFromFormData(propertyId, formData);
 
   if (!result.success) {
-    return adminRedirect(request, `/admin/properties/${propertyId}/edit`, {
+    return await adminRedirect(request, `/admin/properties/${propertyId}/edit`, {
       tab: "general",
       error: result.error ?? "Erro no upload da capa.",
     });
   }
 
-  return adminRedirect(request, `/admin/properties/${propertyId}/edit`, {
+  return await adminRedirect(request, `/admin/properties/${propertyId}/edit`, {
     tab: "general",
     saved: "1",
   });

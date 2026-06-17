@@ -1,18 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import {
-  updateSiteSettingAction,
-  uploadSiteLogoAction,
-  type SiteSettingRecord,
-} from "@/lib/admin/settings-actions";
+import type { SiteSettingRecord } from "@/lib/admin/settings-actions";
 import { buildSiteSettings } from "@/lib/transparency/settings-types";
 
 interface LogoUploaderProps {
@@ -20,43 +14,8 @@ interface LogoUploaderProps {
 }
 
 export function LogoUploader({ settings }: LogoUploaderProps) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
   const map = Object.fromEntries(settings.map((s) => [s.key, s.value]));
   const siteSettings = buildSiteSettings(map);
-
-  function handleSettingSubmit(formData: FormData) {
-    setError(null);
-    setSuccess(null);
-
-    startTransition(async () => {
-      const result = await updateSiteSettingAction(formData);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao salvar.");
-        return;
-      }
-      setSuccess("Configuração salva.");
-      router.refresh();
-    });
-  }
-
-  function handleLogoUpload(formData: FormData) {
-    setError(null);
-    setSuccess(null);
-
-    startTransition(async () => {
-      const result = await uploadSiteLogoAction(formData);
-      if (!result.success) {
-        setError(result.error ?? "Erro no upload.");
-        return;
-      }
-      setSuccess("Logo atualizado com sucesso.");
-      router.refresh();
-    });
-  }
 
   return (
     <div className="space-y-6">
@@ -65,7 +24,11 @@ export function LogoUploader({ settings }: LogoUploaderProps) {
           Textos gerais
         </h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <form action={handleSettingSubmit} className="space-y-3">
+          <form
+            action="/api/admin/settings"
+            method="POST"
+            className="space-y-3"
+          >
             <Field label="Nome do portal">
               <Input
                 name="value"
@@ -74,11 +37,15 @@ export function LogoUploader({ settings }: LogoUploaderProps) {
               />
             </Field>
             <input type="hidden" name="key" value="portal.name" />
-            <Button type="submit" size="sm" disabled={pending}>
+            <Button type="submit" size="sm">
               Salvar nome
             </Button>
           </form>
-          <form action={handleSettingSubmit} className="space-y-3">
+          <form
+            action="/api/admin/settings"
+            method="POST"
+            className="space-y-3"
+          >
             <Field label="Texto curto do footer">
               <Input
                 name="value"
@@ -87,7 +54,7 @@ export function LogoUploader({ settings }: LogoUploaderProps) {
               />
             </Field>
             <input type="hidden" name="key" value="portal.footer_text" />
-            <Button type="submit" size="sm" disabled={pending}>
+            <Button type="submit" size="sm">
               Salvar footer
             </Button>
           </form>
@@ -100,29 +67,14 @@ export function LogoUploader({ settings }: LogoUploaderProps) {
           description="Usado no header do portal."
           currentUrl={siteSettings.logoUrl}
           variant="main"
-          pending={pending}
-          onUpload={handleLogoUpload}
         />
         <LogoUploadCard
           title="Logo compacto"
           description="Usado no footer e espaços menores."
           currentUrl={siteSettings.logoCompactUrl ?? siteSettings.logoUrl}
           variant="compact"
-          pending={pending}
-          onUpload={handleLogoUpload}
         />
       </div>
-
-      {error ? (
-        <p className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]">
-          {error}
-        </p>
-      ) : null}
-      {success ? (
-        <p className="rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2 text-sm text-[#166534]">
-          {success}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -132,15 +84,11 @@ function LogoUploadCard({
   description,
   currentUrl,
   variant,
-  pending,
-  onUpload,
 }: {
   title: string;
   description: string;
   currentUrl: string | null;
   variant: "main" | "compact";
-  pending: boolean;
-  onUpload: (formData: FormData) => void;
 }) {
   return (
     <Card className="border-[#E2E8F0] bg-white p-6 shadow-none">
@@ -161,13 +109,18 @@ function LogoUploadCard({
         )}
       </div>
 
-      <form action={onUpload} className="mt-4 space-y-3">
+      <form
+        action="/api/admin/settings/logo"
+        method="POST"
+        encType="multipart/form-data"
+        className="mt-4 space-y-3"
+      >
         <input type="hidden" name="variant" value={variant} />
         <Field label="Upload (PNG, JPG, WebP, SVG)">
           <Input name="file" type="file" accept="image/*" required />
         </Field>
-        <Button type="submit" size="sm" disabled={pending}>
-          {pending ? "Enviando..." : "Fazer upload"}
+        <Button type="submit" size="sm">
+          Fazer upload
         </Button>
       </form>
     </Card>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { Pencil } from "lucide-react";
 
 import {
@@ -16,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { updateSiteContentAction } from "@/lib/admin/content-actions";
 import { SITE_CONTENT_FALLBACKS } from "@/lib/transparency/content-types";
 import type { SiteContentRecord } from "@/lib/transparency/content-types";
 
@@ -125,25 +123,6 @@ function EditContentDialog({
   item: SiteContentRecord | null;
   onClose: () => void;
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  function handleSubmit(formData: FormData) {
-    if (!item) return;
-    setError(null);
-
-    startTransition(async () => {
-      const result = await updateSiteContentAction(formData);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao salvar.");
-        return;
-      }
-      onClose();
-      router.refresh();
-    });
-  }
-
   const fallback =
     SITE_CONTENT_FALLBACKS[item?.key as keyof typeof SITE_CONTENT_FALLBACKS];
 
@@ -156,7 +135,11 @@ function EditContentDialog({
         </DialogHeader>
 
         {item ? (
-          <form action={handleSubmit} className="mt-4 space-y-4">
+          <form
+            action="/api/admin/content"
+            method="POST"
+            className="mt-4 space-y-4"
+          >
             <input type="hidden" name="key" value={item.key} />
             <div className="space-y-2">
               <Label htmlFor="content-value">Conteúdo</Label>
@@ -183,15 +166,11 @@ function EditContentDialog({
               ) : null}
             </div>
 
-            {error ? <p className="text-sm text-[#B91C1C]">{error}</p> : null}
-
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={pending}>
-                {pending ? "Salvando..." : "Salvar"}
-              </Button>
+              <Button type="submit">Salvar</Button>
             </div>
           </form>
         ) : null}
