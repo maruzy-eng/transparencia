@@ -122,14 +122,14 @@ export async function clearSessionCookie(): Promise<void> {
 }
 
 export async function getSessionTokenFromCookie(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const fromStore = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  if (fromStore) {
-    return fromStore;
+  const headersList = await headers();
+  const fromHeader = getSessionTokenFromCookieHeader(headersList.get("cookie"));
+  if (fromHeader) {
+    return fromHeader;
   }
 
-  const headersList = await headers();
-  return getSessionTokenFromCookieHeader(headersList.get("cookie"));
+  const cookieStore = await cookies();
+  return cookieStore.get(ADMIN_SESSION_COOKIE)?.value ?? null;
 }
 
 export function getSessionTokenFromCookieHeader(
@@ -154,14 +154,14 @@ export async function resolveAdminSessionFromToken(
 ): Promise<AdminSessionResolution> {
   const trimmed = token?.trim();
   if (!trimmed) {
-    logAdminAuth("no_session");
+    logAdminAuth("missing_cookie");
     return { kind: "no_session" };
   }
 
   const envError = getAdminEnvErrorMessage();
   if (envError) {
     console.error("[admin-auth]", {
-      event: "env_misconfigured",
+      event: "service_role_missing",
       missing: getMissingAdminEnvVars().join(","),
     });
     return { kind: "env_error", message: envError };
@@ -169,7 +169,7 @@ export async function resolveAdminSessionFromToken(
 
   const payload = await verifySessionToken(trimmed);
   if (!payload) {
-    logAdminAuth("invalid_session", { reason: "invalid_jwt" });
+    logAdminAuth("jwt_invalid");
     return { kind: "invalid_session", reason: "invalid_jwt" };
   }
 
@@ -177,31 +177,25 @@ export async function resolveAdminSessionFromToken(
     const lookup = await lookupAdminUserById(payload.sub);
     if (lookup.admin) {
       if (lookup.admin.status !== "active") {
-        logAdminAuth("invalid_session", {
-          reason: "inactive_user",
-          userId: payload.sub,
-        });
+        logAdminAuth("user_inactive", { userId: payload.sub });
         return { kind: "invalid_session", reason: "inactive_user" };
       }
-      logAdminAuth("authenticated", { userId: payload.sub, source: "db" });
+      logAdminAuth("session_valid", { userId: payload.sub, source: "db" });
       return { kind: "authenticated", admin: lookup.admin };
     }
 
     if (!lookup.error) {
-      logAdminAuth("invalid_session", {
-        reason: "deleted_user",
-        userId: payload.sub,
-      });
+      logAdminAuth("user_not_found", { userId: payload.sub });
       return { kind: "invalid_session", reason: "deleted_user" };
     }
 
-    logAdminAuth("authenticated", {
+    logAdminAuth("session_valid", {
       userId: payload.sub,
       source: "jwt_fallback",
       dbUnavailable: true,
     });
   } catch {
-    logAdminAuth("authenticated", {
+    logAdminAuth("session_valid", {
       userId: payload.sub,
       source: "jwt_fallback",
       dbException: true,

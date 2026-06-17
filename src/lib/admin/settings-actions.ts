@@ -3,43 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireAdminOrEditor, requireAdminOrEditorForAction } from "@/lib/admin/permissions";
+import { requireAdminOrEditorForAction } from "@/lib/admin/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { refreshSessionCookie } from "@/lib/admin/session";
 
-export type SettingsActionResult = {
-  success: boolean;
-  error?: string;
-};
-
-export interface SiteSettingRecord {
-  id: string;
-  key: string;
-  value: string;
-  type: "text" | "url" | "image";
-  updated_at: string;
-}
+export type { SiteSettingRecord } from "@/lib/admin/settings-queries";
 
 const updateSettingSchema = z.object({
   key: z.string().min(1),
   value: z.string(),
 });
 
-export async function getAdminSiteSettings(): Promise<SiteSettingRecord[]> {
-  await requireAdminOrEditor();
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("site_settings")
-    .select("*")
-    .order("key", { ascending: true });
-
-  if (error) {
-    throw new Error(`Failed to fetch site settings: ${error.message}`);
-  }
-
-  return (data ?? []) as SiteSettingRecord[];
-}
+export type SettingsActionResult = {
+  success: boolean;
+  error?: string;
+};
 
 export async function updateSiteSettingAction(
   formData: FormData,

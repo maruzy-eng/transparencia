@@ -3,10 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireAdminOrEditor, requireAdminOrEditorForAction } from "@/lib/admin/permissions";
+import { requireAdminOrEditorForAction } from "@/lib/admin/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { refreshSessionCookie } from "@/lib/admin/session";
-import type { SiteContentRecord } from "@/lib/transparency/content-types";
 
 const OPTIONAL_EMPTY_KEYS = new Set(["transparency.hero.secondary_cta"]);
 
@@ -19,23 +18,6 @@ const updateContentSchema = z.object({
   key: z.string().min(1),
   value: z.string(),
 });
-
-export async function getAdminSiteContent(): Promise<SiteContentRecord[]> {
-  await requireAdminOrEditor();
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("site_content")
-    .select("*")
-    .order("group", { ascending: true })
-    .order("key", { ascending: true });
-
-  if (error) {
-    throw new Error(`Failed to fetch site content: ${error.message}`);
-  }
-
-  return (data ?? []) as SiteContentRecord[];
-}
 
 export async function updateSiteContentAction(
   formData: FormData,

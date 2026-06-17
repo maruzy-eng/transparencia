@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import type { SiteSettingRecord } from "@/lib/admin/settings-actions";
+import type { SiteSettingRecord } from "@/lib/admin/settings-queries";
 import { buildSiteSettings } from "@/lib/transparency/settings-types";
 
 interface LogoUploaderProps {

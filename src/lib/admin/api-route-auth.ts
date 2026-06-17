@@ -5,6 +5,7 @@ import {
   getClearSessionCookieOptions,
   getSessionCookieOptions,
 } from "@/lib/admin/cookie-options";
+import { buildRequestUrl } from "@/lib/admin/request-url";
 import {
   getSessionTokenFromRequest,
   resolveAdminSessionFromRequest,
@@ -46,10 +47,9 @@ export async function redirectToLogin(
   clearCookie = false,
 ): Promise<NextResponse> {
   const response = NextResponse.redirect(
-    new URL(
-      `/admin/login?next=${encodeURIComponent(nextPath)}`,
-      request.url,
-    ),
+    buildRequestUrl(request, "/admin/login", {
+      next: nextPath,
+    }),
     303,
   );
 
@@ -77,6 +77,14 @@ async function unauthenticatedApiResponse(
   nextPath: string,
   session: AdminSessionResolution,
 ): Promise<NextResponse> {
+  if (session.kind === "no_session") {
+    console.info("[admin-auth]", {
+      event: "missing_cookie",
+      context: "api_route",
+      nextPath,
+    });
+  }
+
   if (session.kind === "env_error") {
     console.error("[admin-auth]", {
       event: "env_misconfigured_block",
@@ -84,10 +92,9 @@ async function unauthenticatedApiResponse(
       nextPath,
     });
     return NextResponse.redirect(
-      new URL(
-        `/admin/login?error=${encodeURIComponent(session.message)}`,
-        request.url,
-      ),
+      buildRequestUrl(request, "/admin/login", {
+        error: session.message,
+      }),
       303,
     );
   }
@@ -117,6 +124,7 @@ export async function requireAdminApi(
   }
 
   if (session.admin.role !== "admin" && session.admin.role !== "editor") {
+    console.info("[admin-auth]", { event: "permission_denied", nextPath });
     return {
       admin: null,
       response: await adminRedirect(request, nextPath, {
@@ -124,6 +132,13 @@ export async function requireAdminApi(
       }),
     };
   }
+
+  console.info("[admin-auth]", {
+    event: "session_valid",
+    context: "api_route",
+    nextPath,
+    userId: session.admin.id,
+  });
 
   return { admin: session.admin, response: null };
 }
@@ -157,12 +172,8 @@ export async function adminRedirect(
   pathname: string,
   params?: Record<string, string>,
 ): Promise<NextResponse> {
-  const url = new URL(pathname, request.url);
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      url.searchParams.set(key, value);
-    }
-  }
-
-  return attachSessionCookie(NextResponse.redirect(url, 303), request);
+  return attachSessionCookie(
+    NextResponse.redirect(buildRequestUrl(request, pathname, params), 303),
+    request,
+  );
 }

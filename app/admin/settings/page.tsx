@@ -1,7 +1,7 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { LogoUploader } from "@/components/admin/logo-uploader";
 import { requireAdminOrEditor } from "@/lib/admin/permissions";
-import { getAdminSiteSettings } from "@/lib/admin/settings-actions";
+import { getAdminSiteSettings } from "@/lib/admin/settings-queries";
 
 export const dynamic = "force-dynamic";
 

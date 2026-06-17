@@ -10,9 +10,18 @@ import {
 } from "@/lib/admin/session";
 import type { AdminUser } from "@/lib/admin/types";
 
+export type CookieReadSource = "next_cookies" | "cookie_header" | "none";
+
 export function getSessionTokenFromRequest(
   request: Request | NextRequest,
 ): string | null {
+  if ("cookies" in request && typeof request.cookies?.get === "function") {
+    const fromNextCookies = request.cookies.get(ADMIN_SESSION_COOKIE)?.value?.trim();
+    if (fromNextCookies) {
+      return fromNextCookies;
+    }
+  }
+
   const fromHeader = getSessionTokenFromCookieHeader(
     request.headers.get("cookie"),
   );
@@ -20,23 +29,41 @@ export function getSessionTokenFromRequest(
     return fromHeader;
   }
 
+  return null;
+}
+
+export function getCookieReadSource(
+  request: Request | NextRequest,
+): CookieReadSource {
   if ("cookies" in request && typeof request.cookies?.get === "function") {
-    return request.cookies.get(ADMIN_SESSION_COOKIE)?.value ?? null;
+    const fromNextCookies = request.cookies.get(ADMIN_SESSION_COOKIE)?.value?.trim();
+    if (fromNextCookies) {
+      return "next_cookies";
+    }
   }
 
-  return null;
+  const fromHeader = getSessionTokenFromCookieHeader(
+    request.headers.get("cookie"),
+  );
+  if (fromHeader) {
+    return "cookie_header";
+  }
+
+  return "none";
 }
 
 export async function resolveAdminSessionFromRequest(
   request: Request | NextRequest,
 ): Promise<AdminSessionResolution> {
   const token = getSessionTokenFromRequest(request);
+  const source = getCookieReadSource(request);
   const session = await resolveAdminSessionFromToken(token);
 
   console.info("[admin-auth]", {
     event: "request_session",
     kind: session.kind,
     hasToken: Boolean(token),
+    cookieSource: source,
     ...(session.kind === "invalid_session" ? { reason: session.reason } : {}),
   });
 

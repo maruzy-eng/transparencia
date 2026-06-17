@@ -1,7 +1,7 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { ContentEditor } from "@/components/admin/content-editor";
 import { requireAdminOrEditor } from "@/lib/admin/permissions";
-import { getAdminSiteContent } from "@/lib/admin/content-actions";
+import { getAdminSiteContent } from "@/lib/admin/content-queries";
 
 export const dynamic = "force-dynamic";
 
