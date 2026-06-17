@@ -76,6 +76,30 @@ export async function requireAdminApi(
   return { admin, response: null };
 }
 
+export async function requireStrictAdminApi(
+  request: Request,
+  nextPath: string,
+): Promise<
+  | { admin: AdminUser; response: null }
+  | { admin: null; response: NextResponse }
+> {
+  const auth = await requireAdminApi(request, nextPath);
+  if (!auth.admin) {
+    return auth;
+  }
+
+  if (auth.admin.role !== "admin") {
+    return {
+      admin: null,
+      response: await adminRedirect(request, nextPath, {
+        error: "Apenas administradores podem executar esta ação.",
+      }),
+    };
+  }
+
+  return auth;
+}
+
 export async function adminRedirect(
   request: Request,
   pathname: string,

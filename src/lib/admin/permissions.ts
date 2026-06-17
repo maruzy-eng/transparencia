@@ -2,7 +2,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
-import { getCurrentAdmin } from "@/lib/admin/session";
+import { getCurrentAdmin, clearSessionCookie } from "@/lib/admin/session";
 import type { AdminUser } from "@/lib/admin/types";
 
 export class AdminPermissionError extends Error {
@@ -12,11 +12,16 @@ export class AdminPermissionError extends Error {
   }
 }
 
+async function redirectToLogin(): Promise<never> {
+  await clearSessionCookie();
+  redirect("/admin/login");
+}
+
 export async function requireAdminOrEditor(): Promise<AdminUser> {
   const admin = await getCurrentAdmin();
 
   if (!admin) {
-    redirect("/admin/login");
+    return redirectToLogin();
   }
 
   if (admin.role !== "admin" && admin.role !== "editor") {

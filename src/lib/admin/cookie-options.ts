@@ -8,7 +8,10 @@ export { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE_SECONDS };
 export const JWT_CLOCK_TOLERANCE = "60s";
 
 export function isSecureSessionCookie(): boolean {
-  return process.env.NODE_ENV === "production";
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL === "1"
+  );
 }
 
 export function getSessionCookieOptions() {

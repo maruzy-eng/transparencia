@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { KeyRound, Pencil, Shield, UserCheck, UserX } from "lucide-react";
 
 import {
@@ -16,12 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import {
-  createAdminUserAction,
-  resetAdminUserPasswordAction,
-  setAdminUserStatusAction,
-  updateAdminUserAction,
-} from "@/lib/admin/user-actions";
 import { formatDate } from "@/lib/transparency/labels";
 import type { AdminUser } from "@/lib/admin/types";
 
@@ -42,17 +35,15 @@ export function UsersTable({
   createOpen,
   onCreateOpenChange,
 }: UsersTableProps) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [resetUser, setResetUser] = useState<AdminUser | null>(null);
 
-  function handleStatusToggle(user: AdminUser) {
+  async function handleStatusToggle(user: AdminUser) {
     const nextStatus = user.status === "active" ? "inactive" : "active";
 
     if (user.id === currentUserId && nextStatus === "inactive") {
-      setError("Você não pode desativar sua própria conta.");
+      window.location.href = `/admin/users?error=${encodeURIComponent("Você não pode desativar sua própria conta.")}`;
       return;
     }
 
@@ -63,15 +54,32 @@ export function UsersTable({
 
     if (!confirm(message)) return;
 
-    setError(null);
-    startTransition(async () => {
-      const result = await setAdminUserStatusAction(user.id, nextStatus);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao alterar status.");
+    setTogglingId(user.id);
+    try {
+      const formData = new FormData();
+      formData.set("status", nextStatus);
+
+      const response = await fetch(`/api/admin/users/${user.id}/status`, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin",
+      });
+
+      if (response.redirected) {
+        window.location.href = response.url;
         return;
       }
-      router.refresh();
-    });
+
+      if (!response.ok) {
+        throw new Error("Não foi possível alterar o status.");
+      }
+
+      window.location.reload();
+    } catch {
+      window.location.href = `/admin/users?error=${encodeURIComponent("Erro ao alterar status.")}`;
+    } finally {
+      setTogglingId(null);
+    }
   }
 
   if (users.length === 0) {
@@ -90,10 +98,6 @@ export function UsersTable({
           open={createOpen}
           onOpenChange={onCreateOpenChange}
           mode="create"
-          onSuccess={() => {
-            onCreateOpenChange(false);
-            router.refresh();
-          }}
         />
       </>
     );
@@ -101,12 +105,6 @@ export function UsersTable({
 
   return (
     <>
-      {error ? (
-        <p className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]">
-          {error}
-        </p>
-      ) : null}
-
       <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -197,7 +195,10 @@ export function UsersTable({
                           type="button"
                           size="icon"
                           variant="outline"
-                          disabled={pending || (isSelf && user.status === "active")}
+                          disabled={
+                            togglingId === user.id ||
+                            (isSelf && user.status === "active")
+                          }
                           onClick={() => handleStatusToggle(user)}
                           aria-label={
                             user.status === "active"
@@ -230,10 +231,6 @@ export function UsersTable({
         open={createOpen}
         onOpenChange={onCreateOpenChange}
         mode="create"
-        onSuccess={() => {
-          onCreateOpenChange(false);
-          router.refresh();
-        }}
       />
 
       <UserFormDialog
@@ -244,10 +241,6 @@ export function UsersTable({
         mode="edit"
         user={editUser ?? undefined}
         currentUserId={currentUserId}
-        onSuccess={() => {
-          setEditUser(null);
-          router.refresh();
-        }}
       />
 
       <ResetPasswordDialog
@@ -255,10 +248,6 @@ export function UsersTable({
         open={Boolean(resetUser)}
         onOpenChange={(open) => {
           if (!open) setResetUser(null);
-        }}
-        onSuccess={() => {
-          setResetUser(null);
-          router.refresh();
         }}
       />
     </>
@@ -271,35 +260,18 @@ function UserFormDialog({
   mode,
   user,
   currentUserId,
-  onSuccess,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
   user?: AdminUser;
   currentUserId?: string;
-  onSuccess: () => void;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const isSelf = user?.id === currentUserId;
-
-  function handleSubmit(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      const result =
-        mode === "create"
-          ? await createAdminUserAction(formData)
-          : await updateAdminUserAction(user!.id, formData);
-
-      if (!result.success) {
-        setError(result.error ?? "Erro ao salvar usuário.");
-        return;
-      }
-
-      onSuccess();
-    });
-  }
+  const action =
+    mode === "create"
+      ? "/api/admin/users"
+      : `/api/admin/users/${user?.id ?? ""}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -315,7 +287,7 @@ function UserFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form action={handleSubmit} className="mt-4 space-y-4">
+        <form action={action} method="POST" className="mt-4 space-y-4">
           <Field label="Nome">
             <Input name="name" defaultValue={user?.name ?? ""} required />
           </Field>
@@ -360,20 +332,15 @@ function UserFormDialog({
             </Field>
           ) : null}
 
-          {error ? <p className="text-sm text-[#B91C1C]">{error}</p> : null}
-
           <div className="flex justify-end gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={pending}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Salvando..." : "Salvar"}
-            </Button>
+            <Button type="submit">Salvar</Button>
           </div>
         </form>
       </DialogContent>
@@ -385,29 +352,12 @@ function ResetPasswordDialog({
   user,
   open,
   onOpenChange,
-  onSuccess,
 }: {
   user: AdminUser | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  function handleSubmit(formData: FormData) {
-    if (!user) return;
-    setError(null);
-
-    startTransition(async () => {
-      const result = await resetAdminUserPasswordAction(user.id, formData);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao redefinir senha.");
-        return;
-      }
-      onSuccess();
-    });
-  }
+  if (!user) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -415,11 +365,15 @@ function ResetPasswordDialog({
         <DialogHeader>
           <DialogTitle>Redefinir senha</DialogTitle>
           <DialogDescription>
-            Defina uma nova senha para <strong>{user?.name}</strong>.
+            Defina uma nova senha para <strong>{user.name}</strong>.
           </DialogDescription>
         </DialogHeader>
 
-        <form action={handleSubmit} className="mt-4 space-y-4">
+        <form
+          action={`/api/admin/users/${user.id}/password`}
+          method="POST"
+          className="mt-4 space-y-4"
+        >
           <Field label="Nova senha">
             <Input
               name="password"
@@ -430,20 +384,15 @@ function ResetPasswordDialog({
             />
           </Field>
 
-          {error ? <p className="text-sm text-[#B91C1C]">{error}</p> : null}
-
           <div className="flex justify-end gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={pending}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Salvando..." : "Redefinir senha"}
-            </Button>
+            <Button type="submit">Redefinir senha</Button>
           </div>
         </form>
       </DialogContent>

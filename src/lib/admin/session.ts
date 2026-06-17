@@ -132,30 +132,34 @@ export function getSessionTokenFromCookieHeader(
 export async function getCurrentAdminFromToken(
   token: string,
 ): Promise<AdminUser | null> {
-  if (getAdminEnvErrorMessage()) {
+  let payload: AdminSessionPayload | null = null;
+
+  try {
+    if (getAdminEnvErrorMessage()) {
+      return null;
+    }
+    payload = await verifySessionToken(token);
+  } catch {
     return null;
   }
 
-  const payload = await verifySessionToken(token);
   if (!payload) {
     return null;
   }
 
-  const lookup = await lookupAdminUserById(payload.sub);
-
-  if (lookup.admin) {
-    if (lookup.admin.status !== "active") {
-      return null;
+  try {
+    const lookup = await lookupAdminUserById(payload.sub);
+    if (lookup.admin) {
+      if (lookup.admin.status !== "active") {
+        return null;
+      }
+      return lookup.admin;
     }
-
-    return lookup.admin;
+  } catch {
+    // Sessão válida no JWT mesmo se o banco estiver indisponível.
   }
 
-  if (lookup.error) {
-    return adminFromSessionPayload(payload);
-  }
-
-  return null;
+  return adminFromSessionPayload(payload);
 }
 
 export async function refreshSessionCookie(): Promise<void> {
