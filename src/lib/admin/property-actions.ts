@@ -15,13 +15,29 @@ import {
   getAdminPropertyById,
   getAdminPropertyBySlug,
 } from "@/lib/admin/property-queries";
-import { requireAdminOrEditor } from "@/lib/admin/permissions";
+import { requireAdminOrEditorForAction } from "@/lib/admin/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { refreshSessionCookie } from "@/lib/admin/session";
 
 export type ActionResult = {
   success: boolean;
   error?: string;
 };
+
+async function assertAdminAction(): Promise<ActionResult | null> {
+  const auth = await requireAdminOrEditorForAction();
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
+  return null;
+}
+
+async function completeAdminAction(
+  propertyId?: string,
+): Promise<ActionResult> {
+  await refreshSessionCookie();
+  return completeAdminAction(propertyId);
+}
 
 function revalidatePropertyPaths(propertyId?: string) {
   revalidatePath("/admin/properties");
@@ -60,7 +76,8 @@ function parsePropertyForm(formData: FormData) {
 export async function createPropertyAction(
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
 
   const parsed = parsePropertyForm(formData);
   if (!parsed.success) {
@@ -95,6 +112,7 @@ export async function createPropertyAction(
     };
   }
 
+  await refreshSessionCookie();
   revalidatePropertyPaths(data.id);
   redirect(`/admin/properties/${data.id}/edit`);
 }
@@ -103,7 +121,8 @@ export async function updatePropertyAction(
   propertyId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
 
   const parsed = parsePropertyForm(formData);
   if (!parsed.success) {
@@ -132,15 +151,15 @@ export async function updatePropertyAction(
     return { success: false, error: error.message };
   }
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }
 
 export async function togglePropertyPublishedAction(
   propertyId: string,
   isPublished: boolean,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
   const supabase = createAdminClient();
 
   const { error } = await supabase
@@ -155,14 +174,14 @@ export async function togglePropertyPublishedAction(
     return { success: false, error: error.message };
   }
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }
 
 export async function deletePropertyAction(
   propertyId: string,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
   const supabase = createAdminClient();
 
   await supabase.from("property_media").delete().eq("property_id", propertyId);
@@ -178,6 +197,7 @@ export async function deletePropertyAction(
     return { success: false, error: error.message };
   }
 
+  await refreshSessionCookie();
   revalidatePropertyPaths();
   redirect("/admin/properties");
 }
@@ -192,11 +212,19 @@ async function deleteStorageFile(url: string) {
   await supabase.storage.from("property-media").remove([path]);
 }
 
+function mapPhaseError(message: string): string {
+  if (message.includes("property_phases_status_check")) {
+    return "Status de fase inválido. Use Pendente, Em andamento, Concluída ou Atrasada.";
+  }
+  return message;
+}
+
 export async function savePhaseAction(
   propertyId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
 
   const parsed = phaseFormSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -234,10 +262,10 @@ export async function savePhaseAction(
       .from("property_phases")
       .update(payload)
       .eq("id", values.id);
-    if (error) return { success: false, error: error.message };
+    if (error) return { success: false, error: mapPhaseError(error.message) };
   } else {
     const { error } = await supabase.from("property_phases").insert(payload);
-    if (error) return { success: false, error: error.message };
+    if (error) return { success: false, error: mapPhaseError(error.message) };
   }
 
   await supabase
@@ -245,15 +273,15 @@ export async function savePhaseAction(
     .update({ last_updated_at: new Date().toISOString() })
     .eq("id", propertyId);
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }
 
 export async function deletePhaseAction(
   propertyId: string,
   phaseId: string,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
   const supabase = createAdminClient();
 
   const { error } = await supabase
@@ -265,15 +293,15 @@ export async function deletePhaseAction(
     return { success: false, error: error.message };
   }
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }
 
 export async function saveUpdateAction(
   propertyId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
 
   const parsed = updateFormSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -316,15 +344,15 @@ export async function saveUpdateAction(
     .update({ last_updated_at: new Date().toISOString() })
     .eq("id", propertyId);
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }
 
 export async function deleteUpdateAction(
   propertyId: string,
   updateId: string,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
   const supabase = createAdminClient();
 
   const { error } = await supabase
@@ -336,15 +364,15 @@ export async function deleteUpdateAction(
     return { success: false, error: error.message };
   }
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }
 
 export async function saveMediaAction(
   propertyId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
 
   const parsed = mediaFormSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -388,8 +416,7 @@ export async function saveMediaAction(
     if (error) return { success: false, error: error.message };
   }
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }
 
 export async function deleteMediaAction(
@@ -397,7 +424,8 @@ export async function deleteMediaAction(
   mediaId: string,
   mediaUrl?: string,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
   const supabase = createAdminClient();
 
   const { error } = await supabase
@@ -413,15 +441,15 @@ export async function deleteMediaAction(
     await deleteStorageFile(mediaUrl);
   }
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }
 
 export async function uploadPropertyMediaAction(
   propertyId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
 
   const file = formData.get("file");
   const mediaType = String(formData.get("media_type") ?? "photo");
@@ -471,15 +499,15 @@ export async function uploadPropertyMediaAction(
     return { success: false, error: insertError.message };
   }
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }
 
 export async function uploadCoverImageAction(
   propertyId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireAdminOrEditor();
+  const authError = await assertAdminAction();
+  if (authError) return authError;
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
@@ -517,6 +545,5 @@ export async function uploadCoverImageAction(
     return { success: false, error: updateError.message };
   }
 
-  revalidatePropertyPaths(propertyId);
-  return { success: true };
+  return completeAdminAction(propertyId);
 }

@@ -27,14 +27,16 @@ export const PHASE_STATUSES = [
   "pending",
   "in_progress",
   "completed",
-  "skipped",
+  "delayed",
 ] as const;
 
 export const UPDATE_TYPES = [
   "general",
-  "milestone",
+  "construction",
   "financial",
-  "issue",
+  "document",
+  "media",
+  "sale",
 ] as const;
 
 export const MEDIA_TYPES = ["photo", "video"] as const;
@@ -68,7 +70,7 @@ export function phaseStatusLabel(status: string): string {
     pending: "Pendente",
     in_progress: "Em andamento",
     completed: "Concluída",
-    skipped: "Ignorada",
+    delayed: "Atrasada",
   };
   return labels[status] ?? status;
 }
@@ -76,9 +78,11 @@ export function phaseStatusLabel(status: string): string {
 export function updateTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     general: "Geral",
-    milestone: "Marco",
+    construction: "Obra",
     financial: "Financeiro",
-    issue: "Problema",
+    document: "Documento",
+    media: "Mídia",
+    sale: "Venda",
   };
   return labels[type] ?? type;
 }

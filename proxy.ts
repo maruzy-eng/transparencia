@@ -49,9 +49,15 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!hasValidSession) {
-    const loginUrl = new URL("/admin/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    const isServerAction = request.method === "POST" && request.headers.has("next-action");
+
+    if (!isServerAction) {
+      const loginUrl = new URL("/admin/login", request.url);
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    return NextResponse.next();
   }
 
   if (sessionToken) {

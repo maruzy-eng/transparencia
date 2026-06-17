@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { hashPassword } from "@/lib/admin/password";
 import {
   canDeactivateAdminUser,
-  requireAdmin,
+  requireAdminForAction,
 } from "@/lib/admin/permissions";
 import {
   createUserSchema,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin/user-schema";
 import { getAdminUserByEmailForAdmin } from "@/lib/admin/user-queries";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { refreshSessionCookie } from "@/lib/admin/session";
 
 export type UserActionResult = {
   success: boolean;
@@ -47,8 +48,11 @@ function parseUpdateUser(formData: FormData) {
 export async function createAdminUserAction(
   formData: FormData,
 ): Promise<UserActionResult> {
-  const actor = await requireAdmin();
-  void actor;
+  const auth = await requireAdminForAction();
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
+  void auth.admin;
 
   const parsed = parseCreateUser(formData);
   if (!parsed.success) {
@@ -82,6 +86,7 @@ export async function createAdminUserAction(
   }
 
   revalidateUserPaths();
+  await refreshSessionCookie();
   return { success: true };
 }
 
@@ -89,7 +94,11 @@ export async function updateAdminUserAction(
   userId: string,
   formData: FormData,
 ): Promise<UserActionResult> {
-  const actor = await requireAdmin();
+  const auth = await requireAdminForAction();
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
+  const actor = auth.admin;
 
   const parsed = parseUpdateUser(formData);
   if (!parsed.success) {
@@ -133,6 +142,7 @@ export async function updateAdminUserAction(
   }
 
   revalidateUserPaths();
+  await refreshSessionCookie();
   return { success: true };
 }
 
@@ -140,7 +150,10 @@ export async function resetAdminUserPasswordAction(
   userId: string,
   formData: FormData,
 ): Promise<UserActionResult> {
-  await requireAdmin();
+  const auth = await requireAdminForAction();
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
 
   const parsed = resetPasswordSchema.safeParse({
     password: formData.get("password"),
@@ -166,6 +179,7 @@ export async function resetAdminUserPasswordAction(
   }
 
   revalidateUserPaths();
+  await refreshSessionCookie();
   return { success: true };
 }
 
@@ -173,7 +187,11 @@ export async function setAdminUserStatusAction(
   userId: string,
   status: "active" | "inactive",
 ): Promise<UserActionResult> {
-  const actor = await requireAdmin();
+  const auth = await requireAdminForAction();
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
+  const actor = auth.admin;
 
   if (status === "inactive" && !canDeactivateAdminUser(actor, userId)) {
     return {
@@ -193,5 +211,6 @@ export async function setAdminUserStatusAction(
   }
 
   revalidateUserPaths();
+  await refreshSessionCookie();
   return { success: true };
 }

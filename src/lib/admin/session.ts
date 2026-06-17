@@ -106,6 +106,20 @@ export async function getSessionTokenFromCookie(): Promise<string | null> {
   return cookieStore.get(ADMIN_SESSION_COOKIE)?.value ?? null;
 }
 
+export async function refreshSessionCookie(): Promise<void> {
+  const token = await getSessionTokenFromCookie();
+  if (!token) {
+    return;
+  }
+
+  const payload = await verifySessionToken(token);
+  if (!payload) {
+    return;
+  }
+
+  await setSessionCookie(token);
+}
+
 export async function lookupAdminUserById(
   id: string,
 ): Promise<AdminUserLookupResult> {

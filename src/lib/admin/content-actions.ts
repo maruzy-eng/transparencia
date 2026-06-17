@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireAdminOrEditor } from "@/lib/admin/permissions";
+import { requireAdminOrEditor, requireAdminOrEditorForAction } from "@/lib/admin/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { refreshSessionCookie } from "@/lib/admin/session";
 import type { SiteContentRecord } from "@/lib/transparency/content-types";
 
 const OPTIONAL_EMPTY_KEYS = new Set(["transparency.hero.secondary_cta"]);
@@ -39,7 +40,10 @@ export async function getAdminSiteContent(): Promise<SiteContentRecord[]> {
 export async function updateSiteContentAction(
   formData: FormData,
 ): Promise<ContentActionResult> {
-  await requireAdminOrEditor();
+  const auth = await requireAdminOrEditorForAction();
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
 
   const parsed = updateContentSchema.safeParse({
     key: formData.get("key"),
@@ -74,5 +78,6 @@ export async function updateSiteContentAction(
 
   revalidatePath("/admin/content");
   revalidatePath("/transparency");
+  await refreshSessionCookie();
   return { success: true };
 }
