@@ -3,7 +3,6 @@ import "server-only";
 import { redirect } from "next/navigation";
 
 import {
-  clearSessionCookie,
   resolveAdminSession,
   type AdminSessionResolution,
 } from "@/lib/admin/session";
@@ -32,7 +31,18 @@ async function handleMissingSession(
   session: AdminSessionResolution,
 ): Promise<never> {
   if (session.kind === "invalid_session") {
-    await clearSessionCookie();
+    console.info("[admin-auth]", {
+      event: "jwt_invalid",
+      context: "requireAdminOrEditor",
+      reason: session.reason,
+    });
+  }
+
+  if (session.kind === "no_session") {
+    console.info("[admin-auth]", {
+      event: "missing_cookie",
+      context: "requireAdminOrEditor",
+    });
   }
 
   if (session.kind === "env_error") {
@@ -43,12 +53,24 @@ async function handleMissingSession(
     throw new Error(session.message);
   }
 
+  if (session.kind === "db_unavailable") {
+    console.error("[admin-auth]", {
+      event: "db_unavailable",
+      context: "requireAdminOrEditor",
+    });
+    throw new Error(session.message);
+  }
+
   redirect("/admin/login");
 }
 
 function sessionErrorMessage(session: AdminSessionResolution): string {
-  if (session.kind === "env_error") {
+  if (session.kind === "env_error" || session.kind === "db_unavailable") {
     return session.message;
+  }
+
+  if (session.kind === "invalid_session" && session.reason === "inactive_user") {
+    return "Esta conta está inativa. Entre em contato com um administrador.";
   }
 
   return "Sessão expirada. Faça login novamente para continuar.";

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 import {
   ADMIN_SESSION_COOKIE,
-  getClearSessionCookieOptions,
   getSessionCookieOptions,
 } from "@/lib/admin/cookie-options";
 import { buildRequestUrl } from "@/lib/admin/request-url";
@@ -10,33 +9,22 @@ import {
   getSessionTokenFromRequest,
   resolveAdminSessionFromRequest,
 } from "@/lib/admin/request-auth";
-import { rotateSessionToken } from "@/lib/admin/session";
 import type { AdminSessionResolution } from "@/lib/admin/session";
 import type { AdminUser } from "@/lib/admin/types";
 
-export async function attachSessionCookie(
+export function attachSessionCookie(
   response: NextResponse,
   request: Request,
-): Promise<NextResponse> {
+): NextResponse {
   const token = getSessionTokenFromRequest(request);
   if (!token) {
     return response;
   }
 
-  const refreshed = await rotateSessionToken(token);
   response.cookies.set(
     ADMIN_SESSION_COOKIE,
-    refreshed ?? token,
+    token,
     getSessionCookieOptions(),
-  );
-  return response;
-}
-
-export function clearSessionCookie(response: NextResponse): NextResponse {
-  response.cookies.set(
-    ADMIN_SESSION_COOKIE,
-    "",
-    getClearSessionCookieOptions(),
   );
   return response;
 }
@@ -44,20 +32,18 @@ export function clearSessionCookie(response: NextResponse): NextResponse {
 export async function redirectToLogin(
   request: Request,
   nextPath: string,
-  clearCookie = false,
 ): Promise<NextResponse> {
-  const response = NextResponse.redirect(
+  console.info("[admin-auth]", {
+    event: "redirect_to_login_without_clearing_cookie",
+    nextPath,
+  });
+
+  return NextResponse.redirect(
     buildRequestUrl(request, "/admin/login", {
       next: nextPath,
     }),
     303,
   );
-
-  if (clearCookie) {
-    clearSessionCookie(response);
-  }
-
-  return response;
 }
 
 function logApiAuthDecision(
@@ -85,6 +71,34 @@ async function unauthenticatedApiResponse(
     });
   }
 
+  if (session.kind === "invalid_session") {
+    const event =
+      session.reason === "deleted_user" ? "user_not_found" : "jwt_invalid";
+    console.info("[admin-auth]", {
+      event,
+      context: "api_route",
+      nextPath,
+      reason: session.reason,
+    });
+  }
+
+  if (session.kind === "db_unavailable") {
+    console.error("[admin-auth]", {
+      event: "db_unavailable",
+      context: "api_route",
+      nextPath,
+    });
+    return attachSessionCookie(
+      NextResponse.redirect(
+        buildRequestUrl(request, nextPath, {
+          error: session.message,
+        }),
+        303,
+      ),
+      request,
+    );
+  }
+
   if (session.kind === "env_error") {
     console.error("[admin-auth]", {
       event: "env_misconfigured_block",
@@ -99,11 +113,7 @@ async function unauthenticatedApiResponse(
     );
   }
 
-  return redirectToLogin(
-    request,
-    nextPath,
-    session.kind === "invalid_session",
-  );
+  return redirectToLogin(request, nextPath);
 }
 
 export async function requireAdminApi(
@@ -127,9 +137,15 @@ export async function requireAdminApi(
     console.info("[admin-auth]", { event: "permission_denied", nextPath });
     return {
       admin: null,
-      response: await adminRedirect(request, nextPath, {
-        error: "Acesso não autorizado.",
-      }),
+      response: attachSessionCookie(
+        NextResponse.redirect(
+          buildRequestUrl(request, nextPath, {
+            error: "Acesso não autorizado.",
+          }),
+          303,
+        ),
+        request,
+      ),
     };
   }
 
@@ -158,9 +174,15 @@ export async function requireStrictAdminApi(
   if (auth.admin.role !== "admin") {
     return {
       admin: null,
-      response: await adminRedirect(request, nextPath, {
-        error: "Apenas administradores podem executar esta ação.",
-      }),
+      response: attachSessionCookie(
+        NextResponse.redirect(
+          buildRequestUrl(request, nextPath, {
+            error: "Apenas administradores podem executar esta ação.",
+          }),
+          303,
+        ),
+        request,
+      ),
     };
   }
 

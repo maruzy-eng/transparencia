@@ -22,7 +22,12 @@ function safeAdminNextPath(next: string | null): string {
   return "/admin/dashboard";
 }
 
-function redirectToLogin(request: NextRequest, nextPath: string) {
+function redirectToLogin(request: NextRequest, nextPath: string, reason: string) {
+  console.info("[admin-middleware]", {
+    event: "redirecting_to_login",
+    nextPath,
+    reason,
+  });
   const loginUrl = new URL("/admin/login", request.url);
   loginUrl.searchParams.set("next", nextPath);
   return NextResponse.redirect(loginUrl);
@@ -62,6 +67,7 @@ export async function proxy(request: NextRequest) {
     return redirectToLogin(
       request,
       `${pathname}${request.nextUrl.search}`,
+      "missing_cookie",
     );
   }
 

@@ -2,7 +2,6 @@ import "server-only";
 
 import { verifyPassword } from "@/lib/admin/password";
 import {
-  clearSessionCookie,
   createSessionToken,
   getAdminUserByEmail,
   setSessionCookie,
@@ -90,5 +89,8 @@ export async function loginAdmin(
 }
 
 export async function logoutAdmin(): Promise<void> {
-  await clearSessionCookie();
+  console.info("[admin-auth]", {
+    event: "logoutAdmin_called_without_clearing_cookie",
+    message: "Use /admin/logout to end the session",
+  });
 }

@@ -1,15 +1,18 @@
 import "server-only";
 
 import { SignJWT, jwtVerify } from "jose";
-import { cookies, headers } from "next/headers";
 
 import {
   ADMIN_SESSION_COOKIE,
   JWT_CLOCK_TOLERANCE,
   SESSION_MAX_AGE_SECONDS,
-  getClearSessionCookieOptions,
-  getSessionCookieOptions,
 } from "@/lib/admin/cookie-options";
+import {
+  clearSessionCookie,
+  getSessionTokenFromCookie,
+  getSessionTokenFromCookieHeader,
+  setSessionCookie,
+} from "@/lib/admin/session-cookie-store";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getAdminAuthSecret,
@@ -36,7 +39,8 @@ export type AdminSessionResolution =
       kind: "invalid_session";
       reason: "invalid_jwt" | "inactive_user" | "deleted_user";
     }
-  | { kind: "env_error"; message: string };
+  | { kind: "env_error"; message: string }
+  | { kind: "db_unavailable"; message: string };
 
 function logAdminAuth(
   event: string,
@@ -111,43 +115,15 @@ export async function verifySessionToken(
   }
 }
 
-export async function setSessionCookie(token: string): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(ADMIN_SESSION_COOKIE, token, getSessionCookieOptions());
-}
+export {
+  clearSessionCookie,
+  getSessionTokenFromCookie,
+  getSessionTokenFromCookieHeader,
+  setSessionCookie,
+};
 
-export async function clearSessionCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(ADMIN_SESSION_COOKIE, "", getClearSessionCookieOptions());
-}
-
-export async function getSessionTokenFromCookie(): Promise<string | null> {
-  const headersList = await headers();
-  const fromHeader = getSessionTokenFromCookieHeader(headersList.get("cookie"));
-  if (fromHeader) {
-    return fromHeader;
-  }
-
-  const cookieStore = await cookies();
-  return cookieStore.get(ADMIN_SESSION_COOKIE)?.value ?? null;
-}
-
-export function getSessionTokenFromCookieHeader(
-  cookieHeader: string | null,
-): string | null {
-  if (!cookieHeader) {
-    return null;
-  }
-
-  for (const part of cookieHeader.split(";")) {
-    const [rawName, ...rawValue] = part.trim().split("=");
-    if (rawName === ADMIN_SESSION_COOKIE && rawValue.length > 0) {
-      return decodeURIComponent(rawValue.join("="));
-    }
-  }
-
-  return null;
-}
+const DB_UNAVAILABLE_MESSAGE =
+  "Serviço temporariamente indisponível. Tente novamente em instantes.";
 
 export async function resolveAdminSessionFromToken(
   token: string | null | undefined,
@@ -189,20 +165,18 @@ export async function resolveAdminSessionFromToken(
       return { kind: "invalid_session", reason: "deleted_user" };
     }
 
-    logAdminAuth("session_valid", {
+    logAdminAuth("db_unavailable", {
       userId: payload.sub,
-      source: "jwt_fallback",
-      dbUnavailable: true,
+      dbError: true,
     });
+    return { kind: "db_unavailable", message: DB_UNAVAILABLE_MESSAGE };
   } catch {
-    logAdminAuth("session_valid", {
+    logAdminAuth("db_unavailable", {
       userId: payload.sub,
-      source: "jwt_fallback",
       dbException: true,
     });
+    return { kind: "db_unavailable", message: DB_UNAVAILABLE_MESSAGE };
   }
-
-  return { kind: "authenticated", admin: adminFromSessionPayload(payload) };
 }
 
 export async function resolveAdminSession(): Promise<AdminSessionResolution> {
