@@ -50,3 +50,32 @@ export function formatPercent(value: number | null | undefined): string {
   if (value == null) return "—";
   return `${value.toFixed(1)}%`;
 }
+
+const PHASE_STATUS_LABELS: Record<string, string> = {
+  completed: "Concluída",
+  in_progress: "Em andamento",
+  pending: "Pendente",
+  delayed: "Atrasada",
+  skipped: "Ignorada",
+};
+
+const UPDATE_TYPE_LABELS: Record<string, string> = {
+  construction: "Obra",
+  financial: "Financeiro",
+  document: "Documento",
+  media: "Mídia",
+  sale: "Venda",
+  general: "Geral",
+  milestone: "Marco",
+  issue: "Problema",
+};
+
+export function phaseStatusLabel(status: string | null | undefined): string {
+  if (!status) return "—";
+  return PHASE_STATUS_LABELS[status] ?? status.replaceAll("_", " ");
+}
+
+export function updateTypeLabel(type: string | null | undefined): string {
+  if (!type) return "—";
+  return UPDATE_TYPE_LABELS[type] ?? type.replaceAll("_", " ");
+}

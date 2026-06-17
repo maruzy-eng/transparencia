@@ -4,8 +4,6 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { PlayCircle } from "lucide-react";
 
-import { EmptyState } from "@/components/transparency/empty-state";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { PropertyMedia } from "@/lib/transparency/types";
 
@@ -45,9 +43,11 @@ function MediaMeta({ item }: { item: PropertyMedia }) {
 
   return (
     <div className="space-y-1 text-sm">
-      {item.caption && <p>{item.caption}</p>}
+      {item.caption && (
+        <p className="font-medium text-[#0F172A]">{item.caption}</p>
+      )}
       {(item.phase || item.room) && (
-        <p className="text-muted-foreground">
+        <p className="text-[#64748B]">
           {[item.phase, item.room].filter(Boolean).join(" · ")}
         </p>
       )}
@@ -60,7 +60,7 @@ function VideoPlayer({ item }: { item: PropertyMedia }) {
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-video overflow-hidden rounded-xl border border-border/60 bg-muted">
+      <div className="group relative aspect-video max-h-[420px] overflow-hidden rounded-[16px] border border-[#E2E8F0] bg-[#F8FAFC]">
         {embedUrl ? (
           <iframe
             src={embedUrl}
@@ -74,10 +74,10 @@ function VideoPlayer({ item }: { item: PropertyMedia }) {
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground transition-colors hover:text-foreground"
+            className="flex h-full flex-col items-center justify-center gap-3 text-[#64748B] transition-colors hover:text-[#0F172A]"
           >
-            <PlayCircle className="h-12 w-12" />
-            <span>Abrir vídeo</span>
+            <PlayCircle className="h-14 w-14 text-[#39AFF2]" />
+            <span className="text-sm font-medium">Abrir vídeo</span>
           </a>
         )}
       </div>
@@ -95,49 +95,64 @@ function PhotoGallery({ photos }: { photos: PropertyMedia[] }) {
     return null;
   }
 
+  if (photos.length === 1) {
+    return (
+      <div className="space-y-3">
+        <div className="relative h-[280px] overflow-hidden rounded-[16px] border border-[#E2E8F0] bg-[#F8FAFC] sm:h-[360px] lg:h-[420px]">
+          <Image
+            src={activePhoto.url}
+            alt={activePhoto.caption ?? "Foto do imóvel"}
+            fill
+            className="object-cover"
+            sizes="(max-width: 1240px) 100vw, 1240px"
+          />
+        </div>
+        <MediaMeta item={activePhoto} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="relative aspect-video overflow-hidden rounded-xl border border-border/60 bg-muted">
+      <div className="relative h-[240px] overflow-hidden rounded-[16px] border border-[#E2E8F0] bg-[#F8FAFC] sm:h-[320px] lg:h-[380px]">
         <Image
           src={activePhoto.url}
           alt={activePhoto.caption ?? "Foto do imóvel"}
           fill
           className="object-cover"
-          sizes="(max-width: 1200px) 100vw, 800px"
+          sizes="(max-width: 1240px) 100vw, 1240px"
         />
       </div>
 
       <MediaMeta item={activePhoto} />
 
-      {photos.length > 1 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {photos.map((item) => {
-            const isActive = item.id === activePhoto.id;
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {photos.map((item) => {
+          const isActive = item.id === activePhoto.id;
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveId(item.id)}
-                className={cn(
-                  "relative aspect-[4/3] overflow-hidden rounded-lg border transition-all",
-                  isActive
-                    ? "border-amber-500 ring-2 ring-amber-500/30"
-                    : "border-border/60 hover:border-amber-500/40",
-                )}
-              >
-                <Image
-                  src={item.thumbnail_url ?? item.url}
-                  alt={item.caption ?? "Miniatura"}
-                  fill
-                  className="object-cover"
-                  sizes="200px"
-                />
-              </button>
-            );
-          })}
-        </div>
-      )}
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveId(item.id)}
+              className={cn(
+                "relative aspect-[4/3] overflow-hidden rounded-[12px] border transition-all",
+                isActive
+                  ? "border-[#39AFF2] ring-2 ring-[#39AFF2]/20"
+                  : "border-[#E2E8F0] hover:border-[#39AFF2]/40 hover:shadow-sm",
+              )}
+            >
+              <Image
+                src={item.thumbnail_url ?? item.url}
+                alt={item.caption ?? "Miniatura"}
+                fill
+                className="object-cover"
+                sizes="200px"
+              />
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -152,38 +167,60 @@ export function MediaGallery({ media }: MediaGalleryProps) {
 
   if (videos.length === 0 && photos.length === 0) {
     return (
-      <EmptyState
-        title="Nenhuma mídia publicada"
-        description="Fotos e vídeos deste imóvel aparecerão aqui quando forem publicados."
-      />
+      <section className="rounded-[20px] border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_24px_rgba(15,23,42,0.04)] sm:p-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold tracking-tight text-[#0F172A]">
+            Fotos e vídeos do projeto
+          </h2>
+          <p className="mt-1 text-sm text-[#64748B]">
+            Registros visuais capturados pela equipe Checkmate durante a
+            execução do projeto.
+          </p>
+        </div>
+        <p className="text-sm text-[#64748B]">
+          Nenhuma mídia publicada ainda.
+        </p>
+      </section>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {videos.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Vídeo</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {videos.map((item) => (
-              <VideoPlayer key={item.id} item={item} />
-            ))}
-          </CardContent>
-        </Card>
-      )}
+    <section className="rounded-[20px] border border-[#E2E8F0] bg-white p-5 shadow-[0_4px_24px_rgba(15,23,42,0.04)] sm:p-6">
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold tracking-tight text-[#0F172A]">
+          Fotos e vídeos do projeto
+        </h2>
+        <p className="mt-1 text-sm text-[#64748B]">
+          Registros visuais capturados pela equipe Checkmate durante a
+          execução do projeto.
+        </p>
+      </div>
 
-      {photos.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Galeria de imagens</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <div className="space-y-8">
+        {videos.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[#64748B]">
+              Vídeos
+            </h3>
+            <div className="space-y-6">
+              {videos.map((item) => (
+                <VideoPlayer key={item.id} item={item} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {photos.length > 0 && (
+          <div className="space-y-4">
+            {videos.length > 0 && (
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[#64748B]">
+                Fotos
+              </h3>
+            )}
             <PhotoGallery photos={photos} />
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

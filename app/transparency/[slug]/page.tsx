@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 
+import { DetailPageShell } from "@/components/transparency/detail-page-shell";
 import { MediaGallery } from "@/components/transparency/media-gallery";
-import { PhaseProgress } from "@/components/transparency/phase-progress";
+import { ProjectHealthCard } from "@/components/transparency/project-health-card";
 import { PropertyHero } from "@/components/transparency/property-hero";
 import { PropertyKpis } from "@/components/transparency/property-kpis";
-import { PropertyTimeline } from "@/components/transparency/property-timeline";
+import { PropertyPhasesTimeline } from "@/components/transparency/property-phases-timeline";
+import { PropertyUpdatesList } from "@/components/transparency/property-updates-list";
 import { ErrorState } from "@/components/transparency/error-state";
 import { getPropertyDetail } from "@/lib/transparency/queries";
 import type { PropertyDetail } from "@/lib/transparency/types";
@@ -69,14 +71,15 @@ export default async function PropertyDetailPage({
   const { property, phases, updates, media } = detail;
 
   return (
-    <div className="space-y-8">
+    <DetailPageShell>
       <PropertyHero property={property} />
       <PropertyKpis property={property} />
-      <section className="rounded-2xl border border-border/60 bg-card/40 p-6">
-        <PhaseProgress progress={property.progress} />
-      </section>
-      <PropertyTimeline phases={phases} updates={updates} />
+      <ProjectHealthCard property={property} phases={phases} />
+      <div className="grid gap-6 xl:grid-cols-2">
+        <PropertyPhasesTimeline phases={phases} />
+        <PropertyUpdatesList updates={updates} />
+      </div>
       <MediaGallery media={media} />
-    </div>
+    </DetailPageShell>
   );
 }
