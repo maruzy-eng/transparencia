@@ -9,6 +9,7 @@ import { PropertyPhasesTimeline } from "@/components/transparency/property-phase
 import { PropertyUpdatesList } from "@/components/transparency/property-updates-list";
 import { ErrorState } from "@/components/transparency/error-state";
 import { getPropertyDetail } from "@/lib/transparency/queries";
+import { getHeroImageUrl } from "@/lib/transparency/media-helpers";
 import type { PropertyDetail } from "@/lib/transparency/types";
 
 interface PropertyDetailPageProps {
@@ -69,10 +70,11 @@ export default async function PropertyDetailPage({
   }
 
   const { property, phases, updates, media } = detail;
+  const heroImageUrl = getHeroImageUrl(property, media);
 
   return (
     <DetailPageShell>
-      <PropertyHero property={property} />
+      <PropertyHero property={property} heroImageUrl={heroImageUrl} />
       <div className="flex flex-col gap-6 md:gap-8 lg:gap-10">
         <MediaGallery media={media} />
         <PropertyKpis property={property} />

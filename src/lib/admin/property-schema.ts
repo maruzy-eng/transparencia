@@ -8,14 +8,14 @@ import {
   UPDATE_TYPES,
   VISIBILITY_OPTIONS,
 } from "@/lib/admin/property-constants";
+import { parseFormattedNumber } from "@/lib/admin/number-format";
 
 const optionalNumber = z
   .union([z.string(), z.number()])
   .optional()
   .transform((value) => {
     if (value === undefined || value === null || value === "") return null;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
+    return parseFormattedNumber(value);
   });
 
 export const propertyFormSchema = z.object({

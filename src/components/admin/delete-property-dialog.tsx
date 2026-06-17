@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import {
   Dialog,
@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { deletePropertyAction } from "@/lib/admin/property-actions";
 import type { Property } from "@/lib/transparency/types";
 
 interface DeletePropertyDialogProps {
@@ -30,7 +29,25 @@ export function DeletePropertyDialog({
     if (!property) return;
 
     startTransition(async () => {
-      await deletePropertyAction(property.id);
+      try {
+        const response = await fetch(`/api/admin/properties/${property.id}`, {
+          method: "DELETE",
+          credentials: "same-origin",
+        });
+
+        if (response.redirected) {
+          window.location.href = response.url;
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Não foi possível excluir o imóvel.");
+        }
+
+        window.location.href = "/admin/properties";
+      } catch {
+        window.location.href = `/admin/properties?error=${encodeURIComponent("Erro ao excluir imóvel.")}`;
+      }
     });
   }
 

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,10 +14,6 @@ import {
   updateTypeLabel,
   visibilityLabel,
 } from "@/lib/admin/property-constants";
-import {
-  deleteUpdateAction,
-  saveUpdateAction,
-} from "@/lib/admin/property-actions";
 import { formatDate } from "@/lib/transparency/labels";
 import type { PropertyUpdate } from "@/lib/transparency/types";
 
@@ -31,34 +26,38 @@ export function PropertyUpdatesEditor({
   propertyId,
   updates,
 }: PropertyUpdatesEditorProps) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const saveAction = `/api/admin/properties/${propertyId}/updates`;
 
-  function handleSave(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      const result = await saveUpdateAction(propertyId, formData);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao salvar atualização.");
-        return;
-      }
-      setEditingId(null);
-      router.refresh();
-    });
-  }
-
-  function handleDelete(updateId: string) {
+  async function handleDelete(updateId: string) {
     if (!confirm("Remover esta atualização?")) return;
-    startTransition(async () => {
-      const result = await deleteUpdateAction(propertyId, updateId);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao remover atualização.");
+
+    setDeletingId(updateId);
+    try {
+      const response = await fetch(
+        `/api/admin/properties/${propertyId}/updates/${updateId}`,
+        {
+          method: "DELETE",
+          credentials: "same-origin",
+        },
+      );
+
+      if (response.redirected) {
+        window.location.href = response.url;
         return;
       }
-      router.refresh();
-    });
+
+      if (!response.ok) {
+        throw new Error("Não foi possível remover a atualização.");
+      }
+
+      window.location.reload();
+    } catch {
+      window.location.href = `/admin/properties/${propertyId}/edit?tab=updates&error=${encodeURIComponent("Erro ao remover atualização.")}`;
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -74,9 +73,8 @@ export function PropertyUpdatesEditor({
             >
               {editingId === update.id ? (
                 <UpdateForm
+                  action={saveAction}
                   update={update}
-                  pending={pending}
-                  onSubmit={handleSave}
                   onCancel={() => setEditingId(null)}
                 />
               ) : (
@@ -102,6 +100,7 @@ export function PropertyUpdatesEditor({
                       type="button"
                       size="sm"
                       variant="outline"
+                      disabled={deletingId === update.id}
                       onClick={() => handleDelete(update.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -116,27 +115,25 @@ export function PropertyUpdatesEditor({
 
       <div className="rounded-xl border border-dashed border-[#E2E8F0] p-4">
         <p className="mb-3 text-sm font-medium text-[#0F172A]">Nova atualização</p>
-        <UpdateForm pending={pending} onSubmit={handleSave} />
+        <UpdateForm action={saveAction} submitLabel="Adicionar atualização" />
       </div>
-
-      {error ? <p className="text-sm text-[#B91C1C]">{error}</p> : null}
     </div>
   );
 }
 
 function UpdateForm({
+  action,
   update,
-  pending,
-  onSubmit,
+  submitLabel,
   onCancel,
 }: {
+  action: string;
   update?: PropertyUpdate;
-  pending: boolean;
-  onSubmit: (formData: FormData) => void;
+  submitLabel?: string;
   onCancel?: () => void;
 }) {
   return (
-    <form action={onSubmit} className="grid gap-3 md:grid-cols-2">
+    <form action={action} method="POST" className="grid gap-3 md:grid-cols-2">
       {update?.id ? <input type="hidden" name="id" value={update.id} /> : null}
       <Field label="Título">
         <Input name="title" defaultValue={update?.title ?? ""} required />
@@ -169,12 +166,8 @@ function UpdateForm({
         </Field>
       </div>
       <div className="flex gap-2 md:col-span-2">
-        <Button type="submit" size="sm" disabled={pending}>
-          {pending
-            ? "Salvando..."
-            : update
-              ? "Atualizar"
-              : "Adicionar atualização"}
+        <Button type="submit" size="sm">
+          {submitLabel ?? (update ? "Atualizar" : "Adicionar atualização")}
         </Button>
         {onCancel ? (
           <Button type="button" size="sm" variant="outline" onClick={onCancel}>

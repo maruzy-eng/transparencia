@@ -22,15 +22,22 @@ function attachSessionCookie(response: NextResponse, token: string): NextRespons
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (!pathname.startsWith("/admin")) {
-    return NextResponse.next();
-  }
-
   const authSecret = process.env.ADMIN_AUTH_SECRET?.trim();
   const sessionToken = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   const hasValidSession =
     Boolean(authSecret && sessionToken) &&
     (await verifyAdminSessionToken(sessionToken!, authSecret!));
+
+  if (pathname.startsWith("/api/admin")) {
+    if (sessionToken && hasValidSession) {
+      return attachSessionCookie(NextResponse.next(), sessionToken);
+    }
+    return NextResponse.next();
+  }
+
+  if (!pathname.startsWith("/admin")) {
+    return NextResponse.next();
+  }
 
   if (pathname.startsWith("/admin/login")) {
     if (hasValidSession && request.method === "GET") {
@@ -68,5 +75,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
 };

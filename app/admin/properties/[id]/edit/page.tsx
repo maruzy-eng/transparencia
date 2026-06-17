@@ -73,7 +73,9 @@ export default async function EditPropertyPage({
             ? "Fase salva com sucesso."
             : defaultTab === "media"
               ? "Mídia salva com sucesso."
-              : "Salvo com sucesso."}
+              : defaultTab === "updates"
+                ? "Atualização salva com sucesso."
+                : "Imóvel salvo com sucesso."}
         </p>
       ) : null}
 

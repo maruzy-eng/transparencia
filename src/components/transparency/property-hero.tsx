@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { CalendarDays, MapPin } from "lucide-react";
 
+import { PropertyCoverImage } from "@/components/transparency/property-cover-image";
 import { ProjectSummaryCard } from "@/components/transparency/project-summary-card";
 import { StatusBadge } from "@/components/transparency/status-badge";
 import { formatDate, projectTypeLabel } from "@/lib/transparency/labels";
@@ -8,26 +8,29 @@ import type { Property } from "@/lib/transparency/types";
 
 interface PropertyHeroProps {
   property: Property;
+  heroImageUrl?: string | null;
 }
 
-export function PropertyHero({ property }: PropertyHeroProps) {
+export function PropertyHero({ property, heroImageUrl }: PropertyHeroProps) {
   const location = [property.city, property.state].filter(Boolean).join(", ");
+  const imageUrl = heroImageUrl ?? property.cover_image_url;
 
   return (
     <section className="overflow-hidden rounded-[24px] border border-[#E2E8F0] bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
       <div className="relative min-h-[340px] sm:min-h-[380px]">
-        {property.cover_image_url ? (
-          <Image
-            src={property.cover_image_url}
-            alt={property.name}
-            fill
-            priority
-            className="object-cover"
-            sizes="(max-width: 1240px) 100vw, 1240px"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#F1F5F9] via-[#E2E8F0] to-[#CBD5E1]" />
-        )}
+        <div className="absolute inset-0">
+          {imageUrl ? (
+            <PropertyCoverImage
+              src={imageUrl}
+              alt={property.name}
+              priority
+              sizes="(max-width: 1240px) 100vw, 1240px"
+              className="h-full w-full"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-[#F1F5F9] via-[#E2E8F0] to-[#CBD5E1]" />
+          )}
+        </div>
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/75 via-[#0F172A]/35 to-[#0F172A]/10" />
 

@@ -40,14 +40,16 @@ export function PropertyCoverImage({
   }
 
   return (
-    <Image
-      src={src}
-      alt={alt}
-      fill
-      priority={priority}
-      sizes={sizes}
-      className={cn("object-cover", imageClassName)}
-      onError={() => setHasError(true)}
-    />
+    <div className={cn("relative h-full w-full overflow-hidden", className)}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        priority={priority}
+        sizes={sizes}
+        className={cn("object-cover", imageClassName)}
+        onError={() => setHasError(true)}
+      />
+    </div>
   );
 }

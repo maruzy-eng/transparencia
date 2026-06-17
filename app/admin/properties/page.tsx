@@ -9,9 +9,16 @@ import { getAdminProperties } from "@/lib/admin/property-queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPropertiesPage() {
+interface AdminPropertiesPageProps {
+  searchParams: Promise<{ error?: string; saved?: string }>;
+}
+
+export default async function AdminPropertiesPage({
+  searchParams,
+}: AdminPropertiesPageProps) {
   const admin = await requireAdminOrEditor();
   const properties = await getAdminProperties();
+  const query = await searchParams;
 
   return (
     <AdminShell
@@ -34,6 +41,21 @@ export default async function AdminPropertiesPage() {
           </Link>
         </Button>
       </div>
+
+      {query.error ? (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
+        >
+          {query.error}
+        </p>
+      ) : null}
+
+      {query.saved === "1" ? (
+        <p className="mb-4 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2 text-sm text-[#166534]">
+          Alteração salva com sucesso.
+        </p>
+      ) : null}
 
       <PropertiesTable properties={properties} />
     </AdminShell>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
 
@@ -9,7 +8,6 @@ import { DeletePropertyDialog } from "@/components/admin/delete-property-dialog"
 import { StatusBadge } from "@/components/transparency/status-badge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { togglePropertyPublishedAction } from "@/lib/admin/property-actions";
 import {
   formatCurrency,
   formatDate,
@@ -24,15 +22,39 @@ interface PropertiesTableProps {
 }
 
 export function PropertiesTable({ properties }: PropertiesTableProps) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Property | null>(null);
 
-  function handleTogglePublished(property: Property) {
-    startTransition(async () => {
-      await togglePropertyPublishedAction(property.id, !property.is_published);
-      router.refresh();
-    });
+  async function handleTogglePublished(property: Property) {
+    setTogglingId(property.id);
+    try {
+      const formData = new FormData();
+      formData.set("is_published", String(!property.is_published));
+
+      const response = await fetch(
+        `/api/admin/properties/${property.id}/publish`,
+        {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin",
+        },
+      );
+
+      if (response.redirected) {
+        window.location.href = response.url;
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Não foi possível atualizar a publicação.");
+      }
+
+      window.location.reload();
+    } catch {
+      window.location.href = `/admin/properties?error=${encodeURIComponent("Erro ao atualizar publicação.")}`;
+    } finally {
+      setTogglingId(null);
+    }
   }
 
   if (properties.length === 0) {
@@ -126,7 +148,7 @@ export function PropertiesTable({ properties }: PropertiesTableProps) {
                         type="button"
                         size="icon"
                         variant="outline"
-                        disabled={pending}
+                        disabled={togglingId === property.id}
                         onClick={() => handleTogglePublished(property)}
                         aria-label={
                           property.is_published ? "Despublicar" : "Publicar"

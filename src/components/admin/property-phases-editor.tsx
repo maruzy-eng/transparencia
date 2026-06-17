@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,6 @@ export function PropertyPhasesEditor({
   propertyId,
   phases,
 }: PropertyPhasesEditorProps) {
-  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const saveAction = `/api/admin/properties/${propertyId}/phases`;
@@ -63,7 +61,7 @@ export function PropertyPhasesEditor({
         throw new Error("Não foi possível remover a fase.");
       }
 
-      router.refresh();
+      window.location.reload();
     } catch {
       window.location.href = `/admin/properties/${propertyId}/edit?tab=phases&error=${encodeURIComponent("Erro ao remover fase.")}`;
     } finally {
