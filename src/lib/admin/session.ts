@@ -1,7 +1,7 @@
 import "server-only";
 
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import {
   ADMIN_SESSION_COOKIE,
@@ -103,7 +103,59 @@ export async function clearSessionCookie(): Promise<void> {
 
 export async function getSessionTokenFromCookie(): Promise<string | null> {
   const cookieStore = await cookies();
-  return cookieStore.get(ADMIN_SESSION_COOKIE)?.value ?? null;
+  const fromStore = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
+  if (fromStore) {
+    return fromStore;
+  }
+
+  const headersList = await headers();
+  return getSessionTokenFromCookieHeader(headersList.get("cookie"));
+}
+
+export function getSessionTokenFromCookieHeader(
+  cookieHeader: string | null,
+): string | null {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  for (const part of cookieHeader.split(";")) {
+    const [rawName, ...rawValue] = part.trim().split("=");
+    if (rawName === ADMIN_SESSION_COOKIE && rawValue.length > 0) {
+      return decodeURIComponent(rawValue.join("="));
+    }
+  }
+
+  return null;
+}
+
+export async function getCurrentAdminFromToken(
+  token: string,
+): Promise<AdminUser | null> {
+  if (getAdminEnvErrorMessage()) {
+    return null;
+  }
+
+  const payload = await verifySessionToken(token);
+  if (!payload) {
+    return null;
+  }
+
+  const lookup = await lookupAdminUserById(payload.sub);
+
+  if (lookup.admin) {
+    if (lookup.admin.status !== "active") {
+      return null;
+    }
+
+    return lookup.admin;
+  }
+
+  if (lookup.error) {
+    return adminFromSessionPayload(payload);
+  }
+
+  return null;
 }
 
 export async function refreshSessionCookie(): Promise<void> {
@@ -168,35 +220,12 @@ export async function getAdminUserByEmail(
 }
 
 export async function getCurrentAdmin(): Promise<AdminUser | null> {
-  if (getAdminEnvErrorMessage()) {
-    return null;
-  }
-
   const token = await getSessionTokenFromCookie();
   if (!token) {
     return null;
   }
 
-  const payload = await verifySessionToken(token);
-  if (!payload) {
-    return null;
-  }
-
-  const lookup = await lookupAdminUserById(payload.sub);
-
-  if (lookup.admin) {
-    if (lookup.admin.status !== "active") {
-      return null;
-    }
-
-    return lookup.admin;
-  }
-
-  if (lookup.error) {
-    return adminFromSessionPayload(payload);
-  }
-
-  return null;
+  return getCurrentAdminFromToken(token);
 }
 
 export async function updateLastLoginAt(adminId: string): Promise<void> {

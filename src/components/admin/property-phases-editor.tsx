@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 
@@ -15,10 +15,6 @@ import {
   phaseStatusLabel,
   visibilityLabel,
 } from "@/lib/admin/property-constants";
-import {
-  deletePhaseAction,
-  savePhaseAction,
-} from "@/lib/admin/property-actions";
 import type { PropertyPhase } from "@/lib/transparency/types";
 
 interface PropertyPhasesEditorProps {
@@ -41,33 +37,38 @@ export function PropertyPhasesEditor({
   phases,
 }: PropertyPhasesEditorProps) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const saveAction = `/api/admin/properties/${propertyId}/phases`;
 
-  function handleSave(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      const result = await savePhaseAction(propertyId, formData);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao salvar fase.");
-        return;
-      }
-      setEditingId(null);
-      router.refresh();
-    });
-  }
-
-  function handleDelete(phaseId: string) {
+  async function handleDelete(phaseId: string) {
     if (!confirm("Remover esta fase?")) return;
-    startTransition(async () => {
-      const result = await deletePhaseAction(propertyId, phaseId);
-      if (!result.success) {
-        setError(result.error ?? "Erro ao remover fase.");
+
+    setDeletingId(phaseId);
+    try {
+      const response = await fetch(
+        `/api/admin/properties/${propertyId}/phases/${phaseId}`,
+        {
+          method: "DELETE",
+          credentials: "same-origin",
+        },
+      );
+
+      if (response.redirected) {
+        window.location.href = response.url;
         return;
       }
+
+      if (!response.ok) {
+        throw new Error("Não foi possível remover a fase.");
+      }
+
       router.refresh();
-    });
+    } catch {
+      window.location.href = `/admin/properties/${propertyId}/edit?tab=phases&error=${encodeURIComponent("Erro ao remover fase.")}`;
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -83,9 +84,8 @@ export function PropertyPhasesEditor({
             >
               {editingId === phase.id ? (
                 <PhaseForm
+                  action={saveAction}
                   phase={phase}
-                  pending={pending}
-                  onSubmit={handleSave}
                   onCancel={() => setEditingId(null)}
                 />
               ) : (
@@ -109,6 +109,7 @@ export function PropertyPhasesEditor({
                       type="button"
                       size="sm"
                       variant="outline"
+                      disabled={deletingId === phase.id}
                       onClick={() => handleDelete(phase.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -123,34 +124,27 @@ export function PropertyPhasesEditor({
 
       <div className="rounded-xl border border-dashed border-[#E2E8F0] p-4">
         <p className="mb-3 text-sm font-medium text-[#0F172A]">Nova fase</p>
-        <PhaseForm pending={pending} onSubmit={handleSave} />
+        <PhaseForm action={saveAction} submitLabel="Adicionar fase" />
       </div>
-
-      {error ? (
-        <p className="text-sm text-[#B91C1C]">{error}</p>
-      ) : null}
     </div>
   );
 }
 
 function PhaseForm({
+  action,
   phase,
-  pending,
-  onSubmit,
+  submitLabel,
   onCancel,
 }: {
+  action: string;
   phase?: PropertyPhase;
-  pending: boolean;
-  onSubmit: (formData: FormData) => void;
+  submitLabel?: string;
   onCancel?: () => void;
 }) {
   const defaults = phase ?? emptyPhase;
 
   return (
-    <form
-      action={onSubmit}
-      className="grid gap-3 md:grid-cols-2"
-    >
+    <form action={action} method="POST" className="grid gap-3 md:grid-cols-2">
       {phase?.id ? <input type="hidden" name="id" value={phase.id} /> : null}
       <Field label="Título">
         <Input name="title" defaultValue={defaults.title} required />
@@ -207,8 +201,8 @@ function PhaseForm({
         </Field>
       </div>
       <div className="flex gap-2 md:col-span-2">
-        <Button type="submit" size="sm" disabled={pending}>
-          {pending ? "Salvando..." : phase ? "Atualizar fase" : "Adicionar fase"}
+        <Button type="submit" size="sm">
+          {submitLabel ?? (phase ? "Atualizar fase" : "Adicionar fase")}
         </Button>
         {onCancel ? (
           <Button type="button" size="sm" variant="outline" onClick={onCancel}>

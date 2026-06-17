@@ -17,11 +17,19 @@ export const dynamic = "force-dynamic";
 
 interface EditPropertyPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string; error?: string; saved?: string }>;
 }
 
-export default async function EditPropertyPage({ params }: EditPropertyPageProps) {
+export default async function EditPropertyPage({
+  params,
+  searchParams,
+}: EditPropertyPageProps) {
   const admin = await requireAdminOrEditor();
   const { id } = await params;
+  const query = await searchParams;
+  const defaultTab = query.tab ?? "general";
+  const flashError = query.error;
+  const flashSaved = query.saved === "1";
   const detail = await getAdminPropertyDetail(id);
 
   if (!detail) {
@@ -50,7 +58,22 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
         <DeletePropertyDialogTrigger property={property} />
       </div>
 
-      <Tabs defaultValue="general" className="space-y-4">
+      {flashError ? (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
+        >
+          {flashError}
+        </p>
+      ) : null}
+
+      {flashSaved ? (
+        <p className="mb-4 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2 text-sm text-[#166534]">
+          Fase salva com sucesso.
+        </p>
+      ) : null}
+
+      <Tabs key={defaultTab} defaultValue={defaultTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="general">Dados gerais</TabsTrigger>
           <TabsTrigger value="phases">Fases ({phases.length})</TabsTrigger>
